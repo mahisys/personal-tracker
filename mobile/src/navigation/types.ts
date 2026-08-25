@@ -2,16 +2,11 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-export type AuthStackParamList = {
-  Login: undefined;
-  Register: undefined;
-};
-
 export type MainTabParamList = {
   Today: undefined;
   Calendar: undefined;
   Notifications: undefined;
-  Profile: undefined;
+  Settings: undefined;
 };
 
 export type RootStackParamList = {

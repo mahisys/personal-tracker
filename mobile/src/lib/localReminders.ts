@@ -1,9 +1,9 @@
-// Layer 1 of the reminder pipeline described in API_CONTRACT.md: a local,
-// on-device alarm scheduled the moment a task with a `reminderAt` is
+// Local, on-device alarm scheduled the moment a task with a `reminderAt` is
 // created or edited, rescheduled on edit, cancelled on delete/complete.
-// This works fully offline and is independent of the push/in-app layers.
+// Fully local — no server involved. `useNotificationListener` records an
+// in-app notification whenever one of these alarms actually fires.
 import * as Notifications from 'expo-notifications';
-import { Task } from '../api/types';
+import { Task } from '../types/task';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

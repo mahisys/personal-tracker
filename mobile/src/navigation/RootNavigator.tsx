@@ -2,38 +2,31 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import { LoadingView } from '../components/LoadingView';
 import { TaskDetailScreen } from '../screens/TaskDetailScreen';
-import { useAuthStore } from '../state/authStore';
+import { useNotificationStore } from '../state/notificationStore';
 import { useTaskStore } from '../state/taskStore';
-import { AuthStack } from './AuthStack';
 import { MainTabs } from './MainTabs';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator(): React.JSX.Element {
-  const isAuthHydrating = useAuthStore((s) => s.isHydrating);
-  const token = useAuthStore((s) => s.token);
   const isTasksHydrated = useTaskStore((s) => s.isHydrated);
   const hydrateTasks = useTaskStore((s) => s.hydrate);
+  const isNotificationsHydrated = useNotificationStore((s) => s.isHydrated);
+  const hydrateNotifications = useNotificationStore((s) => s.hydrate);
 
-  // Load every locally-known task from the on-device DB before the Today
-  // screen can ever render, so viewing tasks never depends on the network
-  // being reachable — see API_CONTRACT.md's "Offline-first architecture".
+  // Load every locally-known task and notification from the on-device DB
+  // before the app can render — this is a fully local app, so there's no
+  // auth or network step to wait on first.
   useEffect(() => {
-    if (token && !isTasksHydrated) {
-      void hydrateTasks();
-    }
-  }, [token, isTasksHydrated, hydrateTasks]);
+    if (!isTasksHydrated) void hydrateTasks();
+  }, [isTasksHydrated, hydrateTasks]);
 
-  if (isAuthHydrating) {
-    return <LoadingView />;
-  }
+  useEffect(() => {
+    if (!isNotificationsHydrated) void hydrateNotifications();
+  }, [isNotificationsHydrated, hydrateNotifications]);
 
-  if (!token) {
-    return <AuthStack />;
-  }
-
-  if (!isTasksHydrated) {
+  if (!isTasksHydrated || !isNotificationsHydrated) {
     return <LoadingView />;
   }
 

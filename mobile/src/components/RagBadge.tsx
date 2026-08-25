@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { RagStatus } from '../api/types';
+import { RagStatus } from '../types/task';
 import { RAG_LABELS } from '../lib/rag';
 import { colors, radii, spacing, typography } from '../theme/theme';
 

@@ -5,7 +5,7 @@ import Swipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
-import { Task } from '../api/types';
+import { Task } from '../types/task';
 import { formatDateTime, formatTime } from '../lib/dateUtils';
 import { colors, radii, shadow, spacing, typography } from '../theme/theme';
 import { RagBadge } from './RagBadge';
@@ -67,9 +67,6 @@ export function TaskRow({
           </Text>
           <View style={styles.metaRow}>
             <Text style={styles.meta}>{showDate ? formatDateTime(task.dueDate) : formatTime(task.dueDate)}</Text>
-            {task.collaborators.length > 0 ? (
-              <Text style={styles.meta}> · {task.collaborators.length + 1} people</Text>
-            ) : null}
             {task.attachments.length > 0 ? <Text style={styles.meta}> · 📎 {task.attachments.length}</Text> : null}
           </View>
         </View>

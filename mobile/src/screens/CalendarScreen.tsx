@@ -1,23 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useState } from 'react';
+import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../components/EmptyState';
 import { TaskRow } from '../components/TaskRow';
-import { formatDateKeyDisplay, shiftDateKey, todayKey, toLocalDateKey, tzOffsetMinutes } from '../lib/dateUtils';
+import { formatDateKeyDisplay, shiftDateKey, todayKey, toLocalDateKey } from '../lib/dateUtils';
 import { MainTabScreenProps } from '../navigation/types';
 import { useTaskStore, useTasksForDate } from '../state/taskStore';
-import { runSync } from '../sync/syncEngine';
 import { colors, radii, spacing, typography } from '../theme/theme';
 
 type Props = MainTabScreenProps<'Calendar'>;
@@ -26,30 +16,8 @@ export function CalendarScreen({ navigation }: Props): React.JSX.Element {
   const [dateKey, setDateKey] = useState(todayKey());
   const [iosPickerOpen, setIosPickerOpen] = useState(false);
   const tasks = useTasksForDate(dateKey);
-  const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      await fetchTasks({ date: dateKey, tzOffset: tzOffsetMinutes(), scope: 'all' });
-    } catch {
-      // Error surfaced elsewhere; the list just stays as last-known state.
-    }
-  }, [dateKey, fetchTasks]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleRefresh = async () => {
-    // Pull-to-refresh is the one place a screen explicitly wants to wait on
-    // the network — everything else stays local-first.
-    setRefreshing(true);
-    await runSync().catch(() => {});
-    setRefreshing(false);
-  };
 
   const handleDelete = (taskId: string, title: string) => {
     Alert.alert('Delete task', `Delete "${title}"? This can't be undone.`, [
@@ -130,7 +98,6 @@ export function CalendarScreen({ navigation }: Props): React.JSX.Element {
         data={tasks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <TaskRow

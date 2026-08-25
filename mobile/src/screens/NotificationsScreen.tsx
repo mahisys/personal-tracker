@@ -1,43 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../components/EmptyState';
 import { formatDateTime } from '../lib/dateUtils';
 import { MainTabScreenProps } from '../navigation/types';
-import { AppNotification } from '../api/types';
 import { unreadCount, useNotificationStore } from '../state/notificationStore';
 import { colors, radii, shadow, spacing, typography } from '../theme/theme';
+import { AppNotification } from '../types/task';
 
 type Props = MainTabScreenProps<'Notifications'>;
 
-const TYPE_ICON: Record<string, string> = {
-  REMINDER: '⏰',
-  SHARE_INVITE: '🤝',
-};
-
 export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
   const notifications = useNotificationStore((s) => s.notifications);
-  const fetchAll = useNotificationStore((s) => s.fetchAll);
   const markRead = useNotificationStore((s) => s.markRead);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(() => {
-    fetchAll().catch(() => {});
-  }, [fetchAll]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchAll().catch(() => {});
-    setRefreshing(false);
-  };
 
   const handlePress = (item: AppNotification) => {
-    if (!item.read) markRead(item.id).catch(() => {});
+    if (!item.read) markRead(item.id);
     if (item.taskId) navigation.navigate('TaskDetail', { taskId: item.taskId });
   };
 
@@ -48,7 +27,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
         {unread > 0 ? (
-          <Pressable onPress={() => markAllRead().catch(() => {})}>
+          <Pressable onPress={() => markAllRead()}>
             <Text style={styles.markAll}>Mark all read</Text>
           </Pressable>
         ) : null}
@@ -58,14 +37,13 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
         data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <Pressable
             style={[styles.row, !item.read && styles.rowUnread]}
             onPress={() => handlePress(item)}
           >
-            <Text style={styles.icon}>{TYPE_ICON[item.type] ?? '🔔'}</Text>
+            <Text style={styles.icon}>⏰</Text>
             <View style={styles.textColumn}>
               <Text style={styles.message}>{item.message}</Text>
               <Text style={styles.time}>{formatDateTime(item.createdAt)}</Text>
@@ -74,7 +52,7 @@ export function NotificationsScreen({ navigation }: Props): React.JSX.Element {
           </Pressable>
         )}
         ListEmptyComponent={
-          <EmptyState icon="🔔" title="No notifications yet" subtitle="Reminders and shared-task updates show up here." />
+          <EmptyState icon="🔔" title="No notifications yet" subtitle="Reminders you set on tasks show up here." />
         }
       />
     </SafeAreaView>

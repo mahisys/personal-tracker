@@ -1,8 +1,6 @@
-// Pure re-implementation of the RAG derivation formula from API_CONTRACT.md.
-// Only used for instant optimistic UI (e.g. right after creating/editing a
-// task, or while offline) — the server's `ragStatus` is always the value
-// trusted for display once a response comes back.
-import { RagStatus, TaskStatus } from '../api/types';
+// Pure derivation of a task's RAG status from its stored status + due date.
+// Never stored itself — always recomputed so it can never go stale.
+import { RagStatus, TaskStatus } from '../types/task';
 
 export function deriveRagStatus(
   status: TaskStatus,

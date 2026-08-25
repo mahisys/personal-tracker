@@ -10,10 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.personaltracker.app",
-      "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
-      }
+      "bundleIdentifier": "com.personaltracker.app"
     },
     "android": {
       "package": "com.personaltracker.app",
@@ -23,7 +20,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["POST_NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED", "INTERNET"],
+      "permissions": ["POST_NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED"],
       "predictiveBackGestureEnabled": false
     },
     "web": {

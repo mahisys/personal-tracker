@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Sharing from 'expo-sharing';
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -13,16 +14,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TaskStatus } from '../api/types';
 import { Button } from '../components/Button';
 import { DateTimeField } from '../components/DateTimeField';
 import { RagBadge } from '../components/RagBadge';
 import { TextField } from '../components/TextField';
 import { deriveRagStatus } from '../lib/rag';
 import { RootStackScreenProps } from '../navigation/types';
-import { useAuthStore } from '../state/authStore';
 import { useTaskStore } from '../state/taskStore';
 import { colors, radii, shadow, spacing, typography } from '../theme/theme';
+import { Attachment, TaskStatus } from '../types/task';
 
 type Props = RootStackScreenProps<'TaskDetail'>;
 
@@ -42,13 +42,34 @@ function defaultDueDate(initialDateKey?: string): Date {
   return new Date(year, month - 1, day, 9, 0, 0, 0);
 }
 
+async function openAttachment(attachment: Attachment): Promise<void> {
+  try {
+    if (attachment.type === 'LINK') {
+      await Linking.openURL(attachment.url);
+      return;
+    }
+    // FILE attachments live at a local file:// URI — sharing handles the
+    // platform-specific bits (e.g. Android's FileProvider) of letting the
+    // user open it in another app; fall back to Linking if unavailable.
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(attachment.url, {
+        mimeType: attachment.mimeType ?? undefined,
+        dialogTitle: attachment.filename ?? undefined,
+      });
+    } else {
+      await Linking.openURL(attachment.url);
+    }
+  } catch {
+    Alert.alert('Could not open attachment', 'This file may have been moved or deleted.');
+  }
+}
+
 export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const params = route.params;
   const taskId = params && 'taskId' in params ? params.taskId : undefined;
   const initialDateKey = params && 'initialDateKey' in params ? params.initialDateKey : undefined;
   const isCreate = !taskId;
 
-  const currentUser = useAuthStore((s) => s.user);
   const task = useTaskStore((s) => (taskId ? s.tasksById[taskId] : undefined));
   const createTask = useTaskStore((s) => s.createTask);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -56,8 +77,6 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
   const addLinkAttachment = useTaskStore((s) => s.addLinkAttachment);
   const addFileAttachment = useTaskStore((s) => s.addFileAttachment);
   const removeAttachment = useTaskStore((s) => s.removeAttachment);
-  const addCollaborator = useTaskStore((s) => s.addCollaborator);
-  const removeCollaborator = useTaskStore((s) => s.removeCollaborator);
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
@@ -68,12 +87,7 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
     task?.reminderAt ? new Date(task.reminderAt) : null,
   );
   const [linkUrl, setLinkUrl] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  const isOwner = !!task && !!currentUser && task.ownerId === currentUser.id;
-  const collaboratorRole = task?.collaborators.find((c) => c.userId === currentUser?.id)?.role;
-  const canEdit = isCreate || isOwner || collaboratorRole === 'EDITOR' || collaboratorRole === 'OWNER';
 
   const previewRag = useMemo(
     () => deriveRagStatus(task?.status ?? 'YTS', dueDate.toISOString()),
@@ -156,17 +170,7 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
     try {
       await addFileAttachment(task.id, { uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
     } catch (e) {
-      Alert.alert('Could not upload file', e instanceof Error ? e.message : 'Something went wrong.');
-    }
-  };
-
-  const handleInvite = async () => {
-    if (!task || !inviteEmail.trim()) return;
-    try {
-      await addCollaborator(task.id, inviteEmail.trim().toLowerCase());
-      setInviteEmail('');
-    } catch (e) {
-      Alert.alert('Could not invite', e instanceof Error ? e.message : 'Something went wrong.');
+      Alert.alert('Could not attach file', e instanceof Error ? e.message : 'Something went wrong.');
     }
   };
 
@@ -178,7 +182,7 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
             <Ionicons name="close" size={26} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>{isCreate ? 'New task' : 'Task'}</Text>
-          {!isCreate && isOwner ? (
+          {!isCreate ? (
             <Pressable onPress={handleDelete} hitSlop={12}>
               <Ionicons name="trash-outline" size={22} color={colors.danger} />
             </Pressable>
@@ -190,21 +194,18 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.statusRow}>
             <RagBadge status={task?.ragStatus ?? previewRag} />
-            {task?.owner ? <Text style={styles.ownerText}>Owned by {task.owner.name}</Text> : null}
           </View>
 
           <TextField
             label="Title"
             value={title}
             onChangeText={setTitle}
-            editable={canEdit}
             placeholder="What needs to happen?"
           />
           <TextField
             label="Description"
             value={description}
             onChangeText={setDescription}
-            editable={canEdit}
             placeholder="Add more detail (optional)"
             multiline
             numberOfLines={4}
@@ -221,7 +222,7 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
             minimumDate={new Date()}
           />
 
-          {!isCreate && canEdit ? (
+          {!isCreate ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Status</Text>
               <View style={styles.segmented}>
@@ -255,7 +256,7 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
                   <Pressable
                     key={attachment.id}
                     style={styles.attachmentRow}
-                    onPress={() => Linking.openURL(attachment.url).catch(() => {})}
+                    onPress={() => openAttachment(attachment)}
                   >
                     <Ionicons
                       name={attachment.type === 'LINK' ? 'link-outline' : 'document-text-outline'}
@@ -265,82 +266,35 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
                     <Text style={styles.attachmentText} numberOfLines={1}>
                       {attachment.filename ?? attachment.url}
                     </Text>
-                    {canEdit ? (
-                      <Pressable
-                        hitSlop={8}
-                        onPress={() => removeAttachment(task.id, attachment.id).catch(() => {})}
-                      >
-                        <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                      </Pressable>
-                    ) : null}
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => removeAttachment(task.id, attachment.id).catch(() => {})}
+                    >
+                      <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                    </Pressable>
                   </Pressable>
                 ))
               )}
-              {canEdit ? (
-                <>
-                  <View style={styles.inlineRow}>
-                    <TextField
-                      value={linkUrl}
-                      onChangeText={setLinkUrl}
-                      placeholder="https://…"
-                      autoCapitalize="none"
-                      containerStyle={styles.inlineInput}
-                    />
-                    <Button title="Add link" variant="secondary" onPress={handleAddLink} />
-                  </View>
-                  <Button title="Attach a file" variant="ghost" onPress={handlePickFile} />
-                </>
-              ) : null}
+              <View style={styles.inlineRow}>
+                <TextField
+                  value={linkUrl}
+                  onChangeText={setLinkUrl}
+                  placeholder="https://…"
+                  autoCapitalize="none"
+                  containerStyle={styles.inlineInput}
+                />
+                <Button title="Add link" variant="secondary" onPress={handleAddLink} />
+              </View>
+              <Button title="Attach a file" variant="ghost" onPress={handlePickFile} />
             </View>
           ) : null}
 
-          {!isCreate && task ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Collaborators</Text>
-              {task.collaborators.length === 0 ? (
-                <Text style={styles.emptyHint}>Only you can see this task.</Text>
-              ) : (
-                task.collaborators.map((collaborator) => (
-                  <View key={collaborator.id} style={styles.collaboratorRow}>
-                    <View>
-                      <Text style={styles.collaboratorEmail}>{collaborator.email}</Text>
-                      <Text style={styles.collaboratorRole}>{collaborator.role}</Text>
-                    </View>
-                    {isOwner ? (
-                      <Pressable
-                        hitSlop={8}
-                        onPress={() => removeCollaborator(task.id, collaborator.id).catch(() => {})}
-                      >
-                        <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ))
-              )}
-              {isOwner ? (
-                <View style={styles.inlineRow}>
-                  <TextField
-                    value={inviteEmail}
-                    onChangeText={setInviteEmail}
-                    placeholder="Invite by email"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    containerStyle={styles.inlineInput}
-                  />
-                  <Button title="Invite" variant="secondary" onPress={handleInvite} />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-
-          {canEdit ? (
-            <Button
-              title={isCreate ? 'Create task' : 'Save changes'}
-              onPress={handleSave}
-              loading={isSaving}
-              style={styles.saveButton}
-            />
-          ) : null}
+          <Button
+            title={isCreate ? 'Create task' : 'Save changes'}
+            onPress={handleSave}
+            loading={isSaving}
+            style={styles.saveButton}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -379,10 +333,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  ownerText: {
-    ...typography.small,
-    color: colors.textMuted,
   },
   multiline: {
     height: 100,
@@ -448,23 +398,6 @@ const styles = StyleSheet.create({
   },
   inlineInput: {
     flex: 1,
-  },
-  collaboratorRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-    ...shadow.card,
-  },
-  collaboratorEmail: {
-    ...typography.body,
-    color: colors.text,
-  },
-  collaboratorRole: {
-    ...typography.small,
-    color: colors.textMuted,
   },
   saveButton: {
     marginTop: spacing.md,

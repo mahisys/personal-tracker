@@ -1,7 +1,7 @@
-// Small local-time date helpers. Dates over the wire are always UTC ISO
-// strings (per API_CONTRACT.md); the day boundaries a person actually cares
-// about ("today", "tomorrow") are local, so every helper here works in the
-// device's local timezone unless noted otherwise.
+// Small local-time date helpers. Dates are stored as UTC ISO strings; the day
+// boundaries a person actually cares about ("today", "tomorrow") are local,
+// so every helper here works in the device's local timezone unless noted
+// otherwise.
 
 /** Minutes east of UTC, e.g. +330 for India, -300 for US Eastern (standard time). */
 export function tzOffsetMinutes(): number {

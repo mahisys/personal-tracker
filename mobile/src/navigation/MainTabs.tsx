@@ -4,7 +4,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { TodayScreen } from '../screens/TodayScreen';
 import { unreadCount, useNotificationStore } from '../state/notificationStore';
 import { colors } from '../theme/theme';
@@ -16,7 +16,7 @@ const ICONS: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
   Today: 'today',
   Calendar: 'calendar',
   Notifications: 'notifications',
-  Profile: 'person-circle',
+  Settings: 'settings',
 };
 
 function NotificationsIcon({ color, size }: { color: string; size: number }): React.JSX.Element {
@@ -52,7 +52,7 @@ export function MainTabs(): React.JSX.Element {
       <Tab.Screen name="Today" component={TodayScreen} />
       <Tab.Screen name="Calendar" component={CalendarScreen} />
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }

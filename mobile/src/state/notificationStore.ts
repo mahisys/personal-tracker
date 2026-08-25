@@ -1,53 +1,55 @@
+// Local in-app notification center. Populated by `useNotificationListener`
+// whenever a scheduled local reminder actually fires (foreground or
+// background) — there is no server pushing anything into this.
+import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
-import { NotificationsApi } from '../api/endpoints';
-import { AppNotification } from '../api/types';
+import * as taskRepo from '../db/taskRepository';
+import { AppNotification } from '../types/task';
 
 interface NotificationState {
   notifications: AppNotification[];
-  isLoading: boolean;
-  error: string | null;
-  fetchAll: () => Promise<void>;
-  markRead: (id: string) => Promise<void>;
-  markAllRead: () => Promise<void>;
-  addFromSocket: (notification: AppNotification) => void;
-  reset: () => void;
+  isHydrated: boolean;
+
+  /** Loads every locally-known notification from the DB into memory. Call
+   * once, right before the app can render — see RootNavigator.tsx. */
+  hydrate: () => Promise<void>;
+
+  addNotification: (input: { taskId: string | null; message: string }) => void;
+  markRead: (id: string) => void;
+  markAllRead: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
-  isLoading: false,
-  error: null,
+  isHydrated: false,
 
-  fetchAll: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const { notifications } = await NotificationsApi.list();
-      set({ notifications });
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Failed to load notifications' });
-      throw e;
-    } finally {
-      set({ isLoading: false });
-    }
+  hydrate: async () => {
+    set({ notifications: taskRepo.listNotifications(), isHydrated: true });
   },
 
-  markRead: async (id) => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    }));
-    await NotificationsApi.markRead(id);
-  },
-
-  markAllRead: async () => {
-    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
-    await NotificationsApi.markAllRead();
-  },
-
-  addFromSocket: (notification) => {
+  addNotification: ({ taskId, message }) => {
+    const notification: AppNotification = {
+      id: Crypto.randomUUID(),
+      taskId,
+      message,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    taskRepo.insertNotification(notification);
     set((state) => ({ notifications: [notification, ...state.notifications] }));
   },
 
-  reset: () => set({ notifications: [], isLoading: false, error: null }),
+  markRead: (id) => {
+    taskRepo.markNotificationRead(id);
+    set((state) => ({
+      notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    }));
+  },
+
+  markAllRead: () => {
+    taskRepo.markAllNotificationsRead();
+    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
+  },
 }));
 
 export function unreadCount(notifications: AppNotification[]): number {

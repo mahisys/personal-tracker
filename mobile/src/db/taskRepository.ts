@@ -1,35 +1,13 @@
-// Local-first storage for tasks and the pending-operations queue described in
-// API_CONTRACT.md's "Offline-first architecture (mobile)" section. Nothing in
-// here talks to the network — `taskStore.ts` applies changes here first
-// (instant, offline-safe) and `sync/syncEngine.ts` is the only thing that
-// later drains `pending_ops` against the REST API.
+// Local storage for tasks and in-app notifications. This is the only data
+// layer in the app — there is no server and nothing to sync to, so every
+// store action in `state/taskStore.ts` / `state/notificationStore.ts` reads
+// and writes here directly and synchronously.
 //
-// `owner` / `attachments` / `collaborators` are flattened into JSON text
-// columns: the app never queries into those sub-fields in SQL, only in JS
-// after loading a row, so full relational normalization isn't worth it here.
-import * as Crypto from 'expo-crypto';
-import type { SQLiteBindValue } from 'expo-sqlite';
-import { Task } from '../api/types';
+// `attachments` is flattened into a JSON text column: the app never queries
+// into attachment sub-fields in SQL, only in JS after loading a row, so full
+// relational normalization isn't worth it here.
+import type { AppNotification, Task } from '../types/task';
 import { getDb } from './database';
-
-export type PendingOpType =
-  | 'task.create'
-  | 'task.update'
-  | 'task.delete'
-  | 'attachment.addLink'
-  | 'attachment.addFile'
-  | 'attachment.remove'
-  | 'collaborator.add'
-  | 'collaborator.remove';
-
-export interface PendingOp {
-  id: string;
-  type: PendingOpType;
-  taskId: string;
-  payload: Record<string, unknown>;
-  createdAt: string;
-  attempts: number;
-}
 
 interface TaskRow {
   id: string;
@@ -40,13 +18,9 @@ interface TaskRow {
   reminderNotified: number;
   status: string;
   ragStatus: string;
-  ownerId: string;
   createdAt: string;
   updatedAt: string;
-  ownerJson: string;
   attachmentsJson: string;
-  collaboratorsJson: string;
-  pendingSync: number;
 }
 
 function rowToTask(row: TaskRow): Task {
@@ -59,25 +33,20 @@ function rowToTask(row: TaskRow): Task {
     reminderNotified: !!row.reminderNotified,
     status: row.status as Task['status'],
     ragStatus: row.ragStatus as Task['ragStatus'],
-    ownerId: row.ownerId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    owner: JSON.parse(row.ownerJson) as Task['owner'],
     attachments: JSON.parse(row.attachmentsJson) as Task['attachments'],
-    collaborators: JSON.parse(row.collaboratorsJson) as Task['collaborators'],
   };
 }
 
-/** Insert-or-replace a task. `pendingSync` marks it as having local changes not
- * yet confirmed by the server — purely a local UI/bookkeeping decoration, never
- * sent to or read from the API. */
-export function upsertTask(task: Task, pendingSync: boolean): void {
+/** Insert-or-replace a task. */
+export function upsertTask(task: Task): void {
   getDb().runSync(
     `INSERT INTO tasks (
        id, title, description, dueDate, reminderAt, reminderNotified, status, ragStatus,
-       ownerId, createdAt, updatedAt, ownerJson, attachmentsJson, collaboratorsJson, pendingSync
+       createdAt, updatedAt, attachmentsJson
      ) VALUES ($id, $title, $description, $dueDate, $reminderAt, $reminderNotified, $status, $ragStatus,
-       $ownerId, $createdAt, $updatedAt, $ownerJson, $attachmentsJson, $collaboratorsJson, $pendingSync)
+       $createdAt, $updatedAt, $attachmentsJson)
      ON CONFLICT(id) DO UPDATE SET
        title = excluded.title,
        description = excluded.description,
@@ -86,13 +55,9 @@ export function upsertTask(task: Task, pendingSync: boolean): void {
        reminderNotified = excluded.reminderNotified,
        status = excluded.status,
        ragStatus = excluded.ragStatus,
-       ownerId = excluded.ownerId,
        createdAt = excluded.createdAt,
        updatedAt = excluded.updatedAt,
-       ownerJson = excluded.ownerJson,
-       attachmentsJson = excluded.attachmentsJson,
-       collaboratorsJson = excluded.collaboratorsJson,
-       pendingSync = excluded.pendingSync`,
+       attachmentsJson = excluded.attachmentsJson`,
     {
       $id: task.id,
       $title: task.title,
@@ -102,22 +67,11 @@ export function upsertTask(task: Task, pendingSync: boolean): void {
       $reminderNotified: task.reminderNotified ? 1 : 0,
       $status: task.status,
       $ragStatus: task.ragStatus,
-      $ownerId: task.ownerId,
       $createdAt: task.createdAt,
       $updatedAt: task.updatedAt,
-      $ownerJson: JSON.stringify(task.owner),
       $attachmentsJson: JSON.stringify(task.attachments),
-      $collaboratorsJson: JSON.stringify(task.collaborators),
-      $pendingSync: pendingSync ? 1 : 0,
     },
   );
-}
-
-export function setTaskPendingSync(taskId: string, pendingSync: boolean): void {
-  getDb().runSync(`UPDATE tasks SET pendingSync = $pendingSync WHERE id = $id`, {
-    $pendingSync: pendingSync ? 1 : 0,
-    $id: taskId,
-  });
 }
 
 export function deleteTaskRow(id: string): void {
@@ -135,127 +89,56 @@ export function getTask(id: string): Task | undefined {
   return row ? rowToTask(row) : undefined;
 }
 
-/** Ids of every task the sync engine currently considers "not yet synced". */
-export function pendingTaskIds(): string[] {
-  return getDb()
-    .getAllSync<{ id: string }>(`SELECT id FROM tasks WHERE pendingSync = 1`)
-    .map((r) => r.id);
-}
+// ---- notifications ----
 
-// ---- pending operations queue ----
-
-interface PendingOpRow {
+interface NotificationRow {
   id: string;
-  type: string;
-  taskId: string;
-  payload: string;
+  taskId: string | null;
+  message: string;
   createdAt: string;
-  attempts: number;
+  read: number;
 }
 
-function rowToOp(row: PendingOpRow): PendingOp {
+function rowToNotification(row: NotificationRow): AppNotification {
   return {
     id: row.id,
-    type: row.type as PendingOpType,
     taskId: row.taskId,
-    payload: JSON.parse(row.payload) as Record<string, unknown>,
+    message: row.message,
     createdAt: row.createdAt,
-    attempts: row.attempts,
+    read: !!row.read,
   };
 }
 
-export function enqueueOp(
-  type: PendingOpType,
-  taskId: string,
-  payload: Record<string, unknown> = {},
-): PendingOp {
-  const op: PendingOp = {
-    id: Crypto.randomUUID(),
-    type,
-    taskId,
-    payload,
-    createdAt: new Date().toISOString(),
-    attempts: 0,
-  };
+export function insertNotification(notification: AppNotification): void {
   getDb().runSync(
-    `INSERT INTO pending_ops (id, type, taskId, payload, createdAt, attempts)
-     VALUES ($id, $type, $taskId, $payload, $createdAt, 0)`,
+    `INSERT INTO notifications (id, taskId, message, createdAt, read)
+     VALUES ($id, $taskId, $message, $createdAt, $read)`,
     {
-      $id: op.id,
-      $type: op.type,
-      $taskId: op.taskId,
-      $payload: JSON.stringify(payload),
-      $createdAt: op.createdAt,
+      $id: notification.id,
+      $taskId: notification.taskId,
+      $message: notification.message,
+      $createdAt: notification.createdAt,
+      $read: notification.read ? 1 : 0,
     },
   );
-  setTaskPendingSync(taskId, true);
-  return op;
 }
 
-/** FIFO order — oldest first, ties broken by insertion order. */
-export function listPendingOps(): PendingOp[] {
+export function listNotifications(): AppNotification[] {
   return getDb()
-    .getAllSync<PendingOpRow>(`SELECT * FROM pending_ops ORDER BY createdAt ASC, rowid ASC`)
-    .map(rowToOp);
+    .getAllSync<NotificationRow>(`SELECT * FROM notifications ORDER BY createdAt DESC`)
+    .map(rowToNotification);
 }
 
-export function listPendingOpsForTask(taskId: string): PendingOp[] {
-  return getDb()
-    .getAllSync<PendingOpRow>(
-      `SELECT * FROM pending_ops WHERE taskId = $taskId ORDER BY createdAt ASC, rowid ASC`,
-      { $taskId: taskId },
-    )
-    .map(rowToOp);
+export function markNotificationRead(id: string): void {
+  getDb().runSync(`UPDATE notifications SET read = 1 WHERE id = $id`, { $id: id });
 }
 
-export function removeOp(id: string): void {
-  getDb().runSync(`DELETE FROM pending_ops WHERE id = $id`, { $id: id });
+export function markAllNotificationsRead(): void {
+  getDb().execSync(`UPDATE notifications SET read = 1;`);
 }
 
-/** Drops every queued op for a task, optionally narrowed to specific types.
- * Used to coalesce/cancel superseded work (e.g. a delete makes any queued
- * update pointless; an unsynced create makes a queued delete pointless). */
-export function removeOpsForTask(taskId: string, types?: PendingOpType[]): void {
-  if (types && types.length > 0) {
-    const placeholders = types.map((_, i) => `$t${i}`).join(', ');
-    const params: Record<string, SQLiteBindValue> = { $taskId: taskId };
-    types.forEach((t, i) => {
-      params[`$t${i}`] = t;
-    });
-    getDb().runSync(`DELETE FROM pending_ops WHERE taskId = $taskId AND type IN (${placeholders})`, params);
-  } else {
-    getDb().runSync(`DELETE FROM pending_ops WHERE taskId = $taskId`, { $taskId: taskId });
-  }
-}
-
-export function incrementOpAttempts(id: string): void {
-  getDb().runSync(`UPDATE pending_ops SET attempts = attempts + 1 WHERE id = $id`, { $id: id });
-}
-
-export function hasPendingOpsForTask(taskId: string): boolean {
-  const row = getDb().getFirstSync<{ c: number }>(
-    `SELECT COUNT(*) as c FROM pending_ops WHERE taskId = $taskId`,
-    { $taskId: taskId },
-  );
-  return !!row && row.c > 0;
-}
-
-export function hasPendingCreateForTask(taskId: string): boolean {
-  const row = getDb().getFirstSync<{ c: number }>(
-    `SELECT COUNT(*) as c FROM pending_ops WHERE taskId = $taskId AND type = 'task.create'`,
-    { $taskId: taskId },
-  );
-  return !!row && row.c > 0;
-}
-
-export function allPendingTaskIds(): string[] {
-  return getDb()
-    .getAllSync<{ taskId: string }>(`SELECT DISTINCT taskId FROM pending_ops`)
-    .map((r) => r.taskId);
-}
-
-/** Wipes every local task and queued operation — call on logout so one user's
- * cached tasks never leak into the next login on a shared device. */
+/** Wipes every local task and notification — used by the "Clear all data"
+ * action in Settings, since there's no account to log out of. */
 export function clearAll(): void {
-  getDb().execSync('DELETE FROM tasks; DELETE FROM pending_ops;');
+  getDb().execSync('DELETE FROM tasks; DELETE FROM notifications;');
 }

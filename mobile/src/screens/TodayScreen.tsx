@@ -1,13 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../components/EmptyState';
 import { TaskRow } from '../components/TaskRow';
-import { formatDateKeyDisplay, todayKey, tzOffsetMinutes } from '../lib/dateUtils';
+import { formatDateKeyDisplay, todayKey } from '../lib/dateUtils';
 import { MainTabScreenProps } from '../navigation/types';
 import { useTaskStore, useTasksForDate } from '../state/taskStore';
-import { runSync } from '../sync/syncEngine';
 import { colors, spacing, typography } from '../theme/theme';
 
 type Props = MainTabScreenProps<'Today'>;
@@ -15,32 +14,8 @@ type Props = MainTabScreenProps<'Today'>;
 export function TodayScreen({ navigation }: Props): React.JSX.Element {
   const dateKey = todayKey();
   const tasks = useTasksForDate(dateKey);
-  const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    // Local-first: resolves instantly from the on-device DB and kicks off a
-    // background sync — never awaits the network itself.
-    try {
-      await fetchTasks({ date: dateKey, tzOffset: tzOffsetMinutes(), scope: 'all' });
-    } catch {
-      // Surfaced via the store's error state on the pull-to-refresh spinner disappearing.
-    }
-  }, [dateKey, fetchTasks]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleRefresh = async () => {
-    // Pull-to-refresh is the one place a screen explicitly wants to wait on
-    // the network — everything else stays local-first.
-    setRefreshing(true);
-    await runSync().catch(() => {});
-    setRefreshing(false);
-  };
 
   const handleDelete = (taskId: string, title: string) => {
     Alert.alert('Delete task', `Delete "${title}"? This can't be undone.`, [
@@ -72,7 +47,6 @@ export function TodayScreen({ navigation }: Props): React.JSX.Element {
         data={tasks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <TaskRow

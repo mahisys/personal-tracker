@@ -1,8 +1,7 @@
-// The on-device SQLite database that backs the whole app's offline-first data
-// layer (see "Offline-first architecture (mobile)" in API_CONTRACT.md). Every
-// screen reads from `taskStore`, which in turn reads/writes here — never
-// straight from the network — so viewing/creating/editing tasks never
-// depends on connectivity.
+// The on-device SQLite database that backs the whole app's data layer. This
+// app is fully local and single-user: there is no server, so this database
+// is not a cache in front of anything — it's the only place task and
+// notification data lives.
 import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'personal-tracker.db';
@@ -22,26 +21,20 @@ function migrate(database: SQLite.SQLiteDatabase): void {
       reminderNotified INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL,
       ragStatus TEXT NOT NULL,
-      ownerId TEXT NOT NULL,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
-      ownerJson TEXT NOT NULL,
-      attachmentsJson TEXT NOT NULL,
-      collaboratorsJson TEXT NOT NULL,
-      pendingSync INTEGER NOT NULL DEFAULT 0
+      attachmentsJson TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS pending_ops (
+    CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY NOT NULL,
-      type TEXT NOT NULL,
-      taskId TEXT NOT NULL,
-      payload TEXT NOT NULL,
+      taskId TEXT,
+      message TEXT NOT NULL,
       createdAt TEXT NOT NULL,
-      attempts INTEGER NOT NULL DEFAULT 0
+      read INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE INDEX IF NOT EXISTS idx_pending_ops_created_at ON pending_ops (createdAt);
-    CREATE INDEX IF NOT EXISTS idx_pending_ops_task_id ON pending_ops (taskId);
+    CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications (createdAt);
   `);
 }
 
