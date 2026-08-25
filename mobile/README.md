@@ -12,9 +12,13 @@ is the source of truth for every request/response shape and event this app relie
   / Notifications / Profile) plus a modal Task Detail screen for create/edit.
 - **Zustand** for global state (auth, tasks, notifications, push-registration status) — a
   single small store per concern, no boilerplate reducers/providers.
+- **expo-sqlite** as the on-device database and source of truth for tasks — the app never
+  reads tasks straight from the network; see "Offline behavior" below.
+- **@react-native-community/netinfo** to detect connectivity for the background sync engine.
+- **expo-crypto** for client-generated task/attachment/collaborator ids (`Crypto.randomUUID()`).
 - **expo-notifications** for both local reminder alarms and Expo push tokens.
 - **expo-secure-store** for the JWT.
-- **socket.io-client** for realtime task/notification sync.
+- **socket.io-client** for realtime task/notification sync (additive only — never required).
 - **react-native-gesture-handler + react-native-reanimated** for swipe-to-complete /
   swipe-to-delete task rows.
 
@@ -50,11 +54,13 @@ App.tsx                   # Providers (gesture handler, safe area, navigation), 
 src/
   api/                     # Typed fetch client + one function per API_CONTRACT.md route
   components/              # RagBadge, Button, TextField, TaskRow (swipeable), DateTimeField, ...
-  hooks/useRealtimeSession  # Socket connection + push registration + foreground reconciliation
+  db/                      # expo-sqlite database + taskRepository (tasks + pending_ops tables)
+  hooks/useRealtimeSession  # Socket connection + push registration + drives useBackgroundSync
   lib/                     # rag.ts (deriveRagStatus), dateUtils, localReminders, pushToken, socket, session
-  navigation/              # AuthStack, MainTabs, RootNavigator, shared param types
+  navigation/              # AuthStack, MainTabs, RootNavigator (hydrates the local task DB), types
   screens/                 # Login, Register, Today, Calendar, Notifications, Profile, TaskDetail
-  state/                   # zustand stores: authStore, taskStore, notificationStore, pushStore
+  state/                   # zustand stores: authStore, taskStore (local-first), notificationStore, pushStore
+  sync/                    # syncEngine.ts (pushQueue/pullSync/runSync) + useBackgroundSync trigger hook
   theme/                   # Design tokens: colors, spacing, radii, typography
 ```
 
@@ -81,9 +87,43 @@ Matches the three layers in `API_CONTRACT.md`:
 ### Realtime sync
 
 `useRealtimeSession` (mounted once in `App.tsx`) opens a single Socket.IO connection while
-a JWT is present, merges `task:created` / `task:updated` / `task:deleted` /
-`notification:new` events into the stores, and re-fetches the current day's tasks plus
-notifications whenever the app returns to the foreground, as a reconciliation safety net.
+a JWT is present and merges `task:created` / `task:updated` / `task:deleted` /
+`notification:new` events into the local DB and stores — an additive speed boost for a
+snappy multi-device feel, never required for correctness (see "Offline behavior" below).
+It also re-fetches notifications on app foreground as a reconciliation safety net, and
+mounts `useBackgroundSync` (`src/sync/useBackgroundSync.ts`), which drives the task sync
+engine on network reconnect, app foreground, and a 60s timer.
+
+## Offline behavior
+
+The app is local-first: every screen reads tasks from an on-device SQLite database
+(`src/db/`), never directly from the network, so it works with **zero connectivity**:
+
+- Viewing today's/any date's tasks, creating, editing, completing, and deleting tasks all
+  apply to the local DB and the UI instantly, offline or not.
+- Local reminder alarms (`src/lib/localReminders.ts`) are scheduled/rescheduled/cancelled
+  from the local DB's `reminderAt`, independent of the network, exactly as before.
+- Every change is also recorded in a local pending-operations queue
+  (`src/db/taskRepository.ts`'s `pending_ops` table) and synced to the backend in the
+  background (`src/sync/syncEngine.ts`) whenever a connection exists — on reconnect, app
+  foreground, a periodic timer, and manual pull-to-refresh.
+
+What still needs a connection **when it's performed**, and is queued (and clearly marked
+"pending sync" via the task's local `pendingSync` state) until it actually reaches the
+server:
+
+- A newly attached file's bytes don't actually land on the backend (and its attachment
+  can't be opened via its server URL) until the device is back online — the local `uri` is
+  kept as a placeholder in the meantime.
+- Inviting a brand-new collaborator by email doesn't reach that person (no `SHARE_INVITE`
+  notification, no push) until the invite syncs.
+- Seeing other users' changes (a collaborator's edits, a new share) only arrives once a
+  pull sync completes — instantly if they're online and connected via socket, otherwise on
+  the next successful `runSync()`.
+
+Task creation uses a client-generated UUID v4 (`Crypto.randomUUID()`) from the start, so an
+offline-created task never needs a server-side id remap; `POST /tasks` is idempotent by
+that id, so a retried sync after a dropped connection never duplicates it.
 
 ## Verifying the app without a backend or device
 
@@ -141,3 +181,8 @@ quickly without setting up a release signing key.)
 - The Today and Calendar screens fetch with `scope=all` (owned + shared tasks) rather than
   the contract's default `mine`, since collaborators need to see tasks shared with them in
   the day-to-day views, not just via a separate "shared" filter.
+- The sync engine's "network-level failure vs. real server rejection" split (see
+  `src/sync/syncEngine.ts`) treats `401`/`429`/`5xx` the same as an unreachable server
+  (leave the op queued for next time) rather than dropping it — those are transient/auth
+  hiccups, not the content of the operation actually being invalid, so silently discarding
+  the user's edit on a momentary server error would be worse than retrying it.

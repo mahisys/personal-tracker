@@ -7,6 +7,7 @@ import { TaskRow } from '../components/TaskRow';
 import { formatDateKeyDisplay, todayKey, tzOffsetMinutes } from '../lib/dateUtils';
 import { MainTabScreenProps } from '../navigation/types';
 import { useTaskStore, useTasksForDate } from '../state/taskStore';
+import { runSync } from '../sync/syncEngine';
 import { colors, spacing, typography } from '../theme/theme';
 
 type Props = MainTabScreenProps<'Today'>;
@@ -20,6 +21,8 @@ export function TodayScreen({ navigation }: Props): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
+    // Local-first: resolves instantly from the on-device DB and kicks off a
+    // background sync — never awaits the network itself.
     try {
       await fetchTasks({ date: dateKey, tzOffset: tzOffsetMinutes(), scope: 'all' });
     } catch {
@@ -32,8 +35,10 @@ export function TodayScreen({ navigation }: Props): React.JSX.Element {
   }, [load]);
 
   const handleRefresh = async () => {
+    // Pull-to-refresh is the one place a screen explicitly wants to wait on
+    // the network — everything else stays local-first.
     setRefreshing(true);
-    await load();
+    await runSync().catch(() => {});
     setRefreshing(false);
   };
 

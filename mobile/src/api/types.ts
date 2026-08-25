@@ -59,10 +59,20 @@ export interface AppNotification {
 }
 
 export interface CreateTaskInput {
+  // Client-generated UUID v4. Required for the offline-first flow so a task
+  // created on-device has a stable id from the moment it exists, online or
+  // not — POST /tasks is idempotent by id (see API_CONTRACT.md).
+  id?: string;
   title: string;
   description?: string;
   dueDate: string;
   reminderAt?: string;
+}
+
+export interface TaskSyncResult {
+  tasks: Task[];
+  deletedTaskIds: string[];
+  serverTime: string;
 }
 
 export interface UpdateTaskInput {

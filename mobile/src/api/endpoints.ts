@@ -11,6 +11,7 @@ import {
   Task,
   TaskScope,
   TaskStatus,
+  TaskSyncResult,
   UpdateTaskInput,
   User,
 } from './types';
@@ -37,6 +38,11 @@ export const TasksApi = {
   update: (id: string, patch: UpdateTaskInput) =>
     api.patch<{ task: Task }>(`/tasks/${id}`, patch),
   remove: (id: string) => api.delete<void>(`/tasks/${id}`),
+
+  // The pull side of offline-first sync (API_CONTRACT.md "GET /tasks/sync").
+  // Call with no `since` for a first full mirror, then with the previous
+  // call's `serverTime` for incremental pulls.
+  sync: (since?: string) => api.get<TaskSyncResult>('/tasks/sync', { since }),
 
   addLinkAttachment: (taskId: string, url: string, filename?: string) =>
     api.post<{ attachment: Attachment }>(`/tasks/${taskId}/attachments`, {

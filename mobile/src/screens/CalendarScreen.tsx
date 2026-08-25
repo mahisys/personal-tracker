@@ -17,6 +17,7 @@ import { TaskRow } from '../components/TaskRow';
 import { formatDateKeyDisplay, shiftDateKey, todayKey, toLocalDateKey, tzOffsetMinutes } from '../lib/dateUtils';
 import { MainTabScreenProps } from '../navigation/types';
 import { useTaskStore, useTasksForDate } from '../state/taskStore';
+import { runSync } from '../sync/syncEngine';
 import { colors, radii, spacing, typography } from '../theme/theme';
 
 type Props = MainTabScreenProps<'Calendar'>;
@@ -43,8 +44,10 @@ export function CalendarScreen({ navigation }: Props): React.JSX.Element {
   }, [load]);
 
   const handleRefresh = async () => {
+    // Pull-to-refresh is the one place a screen explicitly wants to wait on
+    // the network — everything else stays local-first.
     setRefreshing(true);
-    await load();
+    await runSync().catch(() => {});
     setRefreshing(false);
   };
 
