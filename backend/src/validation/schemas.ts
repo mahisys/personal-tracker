@@ -14,6 +14,9 @@ export const loginSchema = z.object({
 const isoDate = z.string().refine((v) => !Number.isNaN(Date.parse(v)), { message: 'must be a valid ISO-8601 date string' });
 
 export const createTaskSchema = z.object({
+  // Optional client-generated UUID so the mobile app can create tasks while offline and
+  // reconcile them later without an id remap. If omitted the server generates one.
+  id: z.string().uuid().optional(),
   title: z.string().min(1),
   description: z.string().nullable().optional(),
   dueDate: isoDate,

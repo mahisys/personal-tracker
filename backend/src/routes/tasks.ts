@@ -59,6 +59,43 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// Full-state sync for offline-first clients: pulls every task the user can see that
+// changed since `since` (or all of them, on a first-ever sync), plus tombstones for tasks
+// deleted since then. Must stay registered ahead of GET /:id so "sync" isn't read as an id.
+router.get('/sync', async (req, res, next) => {
+  try {
+    const userId = req.userId as string;
+    const { since } = req.query as Record<string, string | undefined>;
+    const sinceDate = since ? new Date(since) : null;
+
+    const where: Prisma.TaskWhereInput = {
+      AND: [
+        { OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+        ...(sinceDate ? [{ updatedAt: { gt: sinceDate } }] : []),
+      ],
+    };
+
+    const [tasks, tombstones] = await Promise.all([
+      prisma.task.findMany({ where, include: taskInclude, orderBy: { updatedAt: 'asc' } }),
+      sinceDate
+        ? prisma.taskTombstone.findMany({ where: { deletedAt: { gt: sinceDate } } })
+        : Promise.resolve([]),
+    ]);
+
+    const deletedTaskIds = tombstones
+      .filter((t) => (JSON.parse(t.userIds) as string[]).includes(userId))
+      .map((t) => t.taskId);
+
+    res.status(200).json({
+      tasks: tasks.map(serializeTask),
+      deletedTaskIds,
+      serverTime: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const userId = req.userId as string;
@@ -79,10 +116,23 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', validateBody(createTaskSchema), async (req, res, next) => {
   try {
     const userId = req.userId as string;
-    const { title, description, dueDate, reminderAt } = req.body;
+    const { id, title, description, dueDate, reminderAt } = req.body;
+
+    // Retry-safety for offline sync: if the client already created this exact id (e.g. the
+    // first attempt succeeded but the response never made it back before the connection
+    // dropped), treat a repeat POST as a success instead of a unique-constraint error.
+    if (id) {
+      const existing = await prisma.task.findUnique({ where: { id }, include: taskInclude });
+      if (existing) {
+        if (existing.ownerId !== userId) throw Errors.conflict('Task id already in use');
+        res.status(200).json({ task: serializeTask(existing) });
+        return;
+      }
+    }
 
     const task = await prisma.task.create({
       data: {
+        ...(id ? { id } : {}),
         title,
         description: description ?? null,
         dueDate: new Date(dueDate),
@@ -153,7 +203,12 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     const participantIds = getTaskParticipantIds(task);
-    await prisma.task.delete({ where: { id: req.params.id } });
+    await prisma.$transaction([
+      prisma.taskTombstone.create({
+        data: { taskId: task.id, userIds: JSON.stringify(participantIds) },
+      }),
+      prisma.task.delete({ where: { id: req.params.id } }),
+    ]);
 
     emitToUsers(participantIds, 'task:deleted', { taskId: task.id });
 

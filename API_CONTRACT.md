@@ -70,9 +70,36 @@ Task shape returned by the API:
 ### GET /tasks/:id → `200 { task }`
 
 ### POST /tasks
-Body: `{ title, description?, dueDate, reminderAt? }` → `201 { task }`
+Body: `{ id?, title, description?, dueDate, reminderAt? }` → `201 { task }` (or `200 { task }`
+if `id` was already created by a previous call — see idempotency note below).
 Creator becomes owner automatically (implicit `OWNER` collaborator row is NOT created —
 ownership is `Task.ownerId`; collaborators are additional users).
+
+`id` is optional: a client may generate its own UUID v4 (required for the mobile app's
+offline-first flow below) so the task has a stable id from the moment it's created on-device,
+online or not — no server-side id remap is ever needed. Omit it to let the server generate
+one (fine for any client that always has connectivity, e.g. a future web dashboard).
+**Idempotent by id**: POSTing the same `id` twice returns the existing task with `200`
+instead of erroring, so a client that created a task offline and is unsure whether an
+earlier sync attempt actually reached the server can safely retry.
+
+### GET /tasks/sync?since=<ISO timestamp>
+The pull side of offline-first sync — returns everything a client needs to bring its local
+cache up to date in one call, no date filtering (that's a client-side concern once it has
+the full local set):
+```
+200 { tasks: Task[], deletedTaskIds: string[], serverTime: ISO }
+```
+- Omit `since` for an initial/full sync: `tasks` = every task the user owns or collaborates
+  on; `deletedTaskIds` = `[]` (nothing to reconcile locally yet).
+- Pass `since` (the `serverTime` returned by the previous sync call) for an incremental
+  sync: `tasks` = only tasks with `updatedAt > since` that the user can currently see;
+  `deletedTaskIds` = ids of tasks deleted (by anyone, tombstoned) since `since` that this
+  user could previously see.
+- Always store the returned `serverTime` (not the client's own clock) as the new
+  high-water mark for the next call, to avoid clock-skew gaps.
+- This endpoint intentionally does not require a `date` — mobile keeps a full local mirror
+  of every visible task so viewing "today" or any other date never depends on the network.
 
 ### PATCH /tasks/:id
 Body: any subset of `{ title, description, dueDate, reminderAt, status }` → `200 { task }`
@@ -150,6 +177,41 @@ Three independent layers, all driven off `Task.reminderAt`:
 3. **In-app notification center:** the `Notification` rows created above populate
    `GET /notifications` and arrive live via the `notification:new` socket event, so a
    user with the app open sees an in-app banner even without OS-level push.
+
+## Offline-first architecture (mobile)
+
+The phone app must be fully usable with zero network connectivity — viewing today's tasks,
+creating/editing/deleting tasks, marking them done, and getting reminders must never depend
+on the backend being reachable. The backend is only needed to sync across devices/users.
+
+Required design on the mobile side:
+
+1. **Local database is the source of truth for the UI.** All screens read from and write to
+   an on-device SQLite database (`expo-sqlite`), never directly from the network. Every task
+   CRUD action applies to the local DB immediately (instant UI, works offline) and is also
+   recorded in a local **pending-operations queue**.
+2. **Background sync engine** drains the pending-operations queue against the REST API
+   whenever a connection is available (on network-reconnect, app foreground, and a periodic
+   timer), using `id`-bearing, idempotent POSTs so retries after a dropped connection never
+   duplicate a task (see the idempotency note on `POST /tasks` above). Failed items (real
+   validation/permission errors, not network errors) are dropped with a logged reason rather
+   than retried forever; network errors leave the item queued for the next attempt.
+3. **Pull sync** calls `GET /tasks/sync` (first with no `since` for the initial full mirror,
+   then incrementally using the stored `serverTime`) to merge remote changes — including
+   ones made by collaborators — into the local DB, and to remove locally any task present in
+   `deletedTaskIds`. A task that's simultaneously pending-local-edit and remotely updated
+   resolves by `updatedAt` (later wins) — acceptable for a personal/small-team tracker.
+4. **Live updates via Socket.IO remain additive, not required**: when connected, `task:*`
+   socket events update the local DB immediately for a snappy multi-device feel; when not
+   connected, the next pull sync catches up regardless. The app must never block or error
+   out because the socket isn't connected.
+5. **Reminders stay device-local regardless of sync state**: the local alarm scheduled via
+   `expo-notifications` is driven off the local DB's `reminderAt`, not off any network call —
+   this already doesn't depend on connectivity and must keep working exactly as today.
+6. Attachments/collaborator invites that require the server (file upload bytes, inviting a
+   brand-new email) are queued the same way as task edits when created offline, and clearly
+   marked "pending sync" in the UI until they actually reach the server — the user should
+   never see them silently fail or silently succeed while actually stuck offline.
 
 ## Environment variables (backend)
 
