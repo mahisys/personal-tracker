@@ -29,8 +29,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "apk-${{ github.event.inputs.run_id }}" \
-            app-debug.apk \
+          gh release create "apk-${{ github.event.inputs.run_id }}-${{ github.run_id }}" \
+            app-release.apk \
             --repo "${{ github.repository }}" \
             --title "Personal Tracker APK" \
-            --notes "Debug APK built from workflow run ${{ github.event.inputs.run_id }}."
+            --notes "Release APK built from workflow run ${{ github.event.inputs.run_id }}."
