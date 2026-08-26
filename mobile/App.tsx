@@ -8,11 +8,11 @@ import { useNotificationListener } from './src/hooks/useNotificationListener';
 import { requestNotificationPermissions } from './src/lib/localReminders';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
-// TEMPORARY diagnostic scaffolding: a release build crashes on launch with no
-// visible reason (nothing is logged anywhere the user can see). This traps
-// both uncaught JS exceptions and React render errors and shows the real
-// message on screen instead of letting the app silently die, so the actual
-// cause can be read off a screenshot. Remove once the crash is diagnosed.
+// A crash-safety net: traps uncaught JS exceptions and React render errors
+// and shows the message on screen instead of letting the app silently close.
+// There's no crash reporting service wired up for this app, so this screen —
+// plus asking the user for a screenshot — is the only way to ever learn what
+// went wrong.
 declare const ErrorUtils: {
   getGlobalHandler(): (error: Error, isFatal?: boolean) => void;
   setGlobalHandler(handler: (error: Error, isFatal?: boolean) => void): void;
@@ -36,7 +36,7 @@ if (typeof ErrorUtils !== 'undefined' && ErrorUtils) {
   });
 }
 
-class DiagnosticErrorBoundary extends React.Component<
+class CrashScreen extends React.Component<
   { children: React.ReactNode },
   { error: CaughtError | null }
 > {
@@ -55,7 +55,7 @@ class DiagnosticErrorBoundary extends React.Component<
       return (
         <View style={{ flex: 1, backgroundColor: '#1a0000', paddingTop: 60, paddingHorizontal: 16 }}>
           <Text style={{ color: '#ff6b6b', fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
-            App crashed — diagnostic capture
+            Something went wrong
           </Text>
           <ScrollView>
             <Text style={{ color: 'white', fontSize: 14, marginBottom: 12 }}>
@@ -91,12 +91,12 @@ export default function App(): React.JSX.Element {
   }, []);
 
   return (
-    <DiagnosticErrorBoundary>
+    <CrashScreen>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <AppShell />
         </SafeAreaProvider>
       </GestureHandlerRootView>
-    </DiagnosticErrorBoundary>
+    </CrashScreen>
   );
 }

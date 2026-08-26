@@ -11,6 +11,7 @@ import * as Crypto from 'expo-crypto';
 // behind this subpath in favor of a new File/Directory class API — the
 // legacy API is still fully supported and simpler for our one-off copy/delete needs.
 import * as FileSystem from 'expo-file-system/legacy';
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import * as taskRepo from '../db/taskRepository';
 import { isOnLocalDay } from '../lib/dateUtils';
@@ -184,11 +185,21 @@ export function getTaskById(taskId: string): Task | undefined {
   return useTaskStore.getState().tasksById[taskId];
 }
 
-/** Tasks due on a given local calendar day (`YYYY-MM-DD`), sorted by time. */
+/** Tasks due on a given local calendar day (`YYYY-MM-DD`), sorted by time.
+ *
+ * Selects the stable `tasksById` reference (unchanged unless the store
+ * actually mutates) and derives the filtered/sorted array via `useMemo`.
+ * Returning a freshly-built array straight from a zustand selector — as this
+ * used to — hands React a new reference on every render, which trips
+ * `useSyncExternalStore`'s snapshot-consistency check into an infinite
+ * render loop ("Maximum update depth exceeded"). */
 export function useTasksForDate(dateKey: string): Task[] {
-  return useTaskStore((state) =>
-    Object.values(state.tasksById)
-      .filter((task) => isOnLocalDay(task.dueDate, dateKey))
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+  const tasksById = useTaskStore((state) => state.tasksById);
+  return useMemo(
+    () =>
+      Object.values(tasksById)
+        .filter((task) => isOnLocalDay(task.dueDate, dateKey))
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+    [tasksById, dateKey],
   );
 }
