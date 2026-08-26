@@ -99,6 +99,13 @@ export function TaskDetailScreen({ route, navigation }: Props): React.JSX.Elemen
       Alert.alert('Title required', 'Give this task a title.');
       return;
     }
+    if (reminderAt && reminderAt.getTime() <= Date.now()) {
+      Alert.alert(
+        'Reminder is in the past',
+        'Pick a reminder time in the future, or clear it — a past reminder is silently never scheduled.',
+      );
+      return;
+    }
     setIsSaving(true);
     try {
       if (isCreate) {

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -34,13 +35,19 @@ function NotificationsIcon({ color, size }: { color: string; size: number }): Re
 }
 
 export function MainTabs(): React.JSX.Element {
+  // The tab bar must reserve space for the device's own gesture/nav bar
+  // (Android's edge-to-edge display draws app content behind it by default)
+  // or the system bar overlaps our tab labels/icons — a fixed height ignored
+  // this entirely.
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { height: 60 + insets.bottom, paddingBottom: 8 + insets.bottom }],
         tabBarIcon: ({ color, size }) =>
           route.name === 'Notifications' ? (
             <NotificationsIcon color={color} size={size} />
@@ -61,8 +68,6 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
-    height: 60,
-    paddingBottom: 8,
     paddingTop: 8,
   },
   badge: {
