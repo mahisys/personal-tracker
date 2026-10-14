@@ -146,9 +146,12 @@ export function renderInvoicePdf(inv: Invoice, items: Item[], settings: AppSetti
     doc.addPage();
     y = 50;
   }
+  const rates = [...new Set(items.map((i) => i.gstRateBps))];
+  const one = rates.length === 1 ? rates[0] : null;
+  const at = (bps: number | null) => (bps == null ? "" : ` @ ${bps / 100}%`);
   const totals: [string, string, boolean?][] = [["Taxable value", pdfMoney(inv.subtotalPaise)]];
-  if (inv.interstate) totals.push(["IGST", pdfMoney(inv.igstPaise)]);
-  else totals.push(["CGST", pdfMoney(inv.cgstPaise)], ["SGST", pdfMoney(inv.sgstPaise)]);
+  if (inv.interstate) totals.push([`IGST${at(one)}`, pdfMoney(inv.igstPaise)]);
+  else totals.push([`CGST${at(one == null ? null : one / 2)}`, pdfMoney(inv.cgstPaise)], [`SGST${at(one == null ? null : one / 2)}`, pdfMoney(inv.sgstPaise)]);
   totals.push(["Total", pdfMoney(inv.totalPaise), true]);
   if (inv.paidPaise > 0) totals.push(["Received", pdfMoney(inv.paidPaise)], ["Balance due", pdfMoney(Math.max(0, inv.totalPaise - inv.paidPaise)), true]);
   const tx = L + W / 2;

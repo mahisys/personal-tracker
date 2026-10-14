@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "motion/react";
 import { toggleTaskDone } from "@/server/tasks/actions";
 import { cn } from "@/lib/cn";
@@ -26,8 +26,12 @@ export function TaskCheck({
   onChange?: (done: boolean) => void;
 }) {
   const [checked, setChecked] = useState(done);
+  const [syncedDone, setSyncedDone] = useState(done);
   const [pending, start] = useTransition();
-  useEffect(() => setChecked(done), [done]);
+  if (syncedDone !== done) {
+    setSyncedDone(done);
+    setChecked(done);
+  }
 
   const dim = { sm: "h-[18px] w-[18px]", md: "h-[22px] w-[22px]", lg: "h-7 w-7" }[size];
   const ring = priorityMeta(priority).ring;

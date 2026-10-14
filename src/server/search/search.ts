@@ -95,7 +95,7 @@ export async function searchAll(raw: string): Promise<{ q: string; groups: Searc
   ]);
 
   const pretty = (s: string) => s.replace(/_/g, " ");
-  const groups: SearchGroup[] = [
+  const all: SearchGroup[] = [
     { key: "leads", label: "Leads", items: leadRows.map((r) => ({ id: r.id, title: r.title, subtitle: r.value ? formatINR(r.value, { whole: true }) : "Lead", href: `/crm/leads/${r.id}`, workspace: r.workspace })) },
     { key: "contacts", label: "Contacts", items: contactRows.map((r) => ({ id: r.id, title: r.name, subtitle: [r.phone, r.email].filter(Boolean).join(" · ") || "Contact", href: `/crm/contacts/${r.id}`, workspace: r.workspace })) },
     { key: "companies", label: "Companies", items: companyRows.map((r) => ({ id: r.id, title: r.name, subtitle: [r.gstin, r.city].filter(Boolean).join(" · ") || "Company", href: `/crm/companies/${r.id}`, workspace: r.workspace })) },
@@ -125,7 +125,8 @@ export async function searchAll(raw: string): Promise<{ q: string; groups: Searc
       })),
     },
     { key: "bills", label: "Bills & payments", items: billRows.map((r) => ({ id: r.id, title: r.title, subtitle: `${formatINR(r.amount, { whole: true })}${r.payee ? ` to ${r.payee}` : ""} · ${r.status === "upcoming" ? `due ${formatDay(r.dueDate, { short: true })}` : r.status}`, href: `/planner/bills/${r.id}`, workspace: r.workspace })) },
-  ].filter((g) => g.items.length);
+  ];
+  const groups = all.filter((g) => g.items.length);
 
   return { q, groups, total: groups.reduce((s, g) => s + g.items.length, 0) };
 }

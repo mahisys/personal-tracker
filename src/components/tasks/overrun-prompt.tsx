@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Hourglass, X } from "lucide-react";
@@ -11,14 +11,19 @@ import { Input } from "@/components/ui/form";
 import { formatMinutes } from "@/lib/dates";
 import { onOverrun } from "./events";
 
+const noop = () => () => {};
+
 /** Gentle "that took longer than planned — revise the estimate?" sheet. Mount once per page. */
 export function OverrunPrompt() {
   const [o, setO] = useState<Overrun | null>(null);
   const [h, setH] = useState("0");
   const [m, setM] = useState("0");
   const [pending, start] = useTransition();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
   useEffect(
     () =>
       onOverrun((next) => {

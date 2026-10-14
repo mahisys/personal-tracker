@@ -114,10 +114,12 @@ export async function getEstimateAccuracy(ws: WorkspaceKey | null, sinceDays = 1
     .select({
       taskType: tasks.taskType,
       estimateMinutes: tasks.estimateMinutes,
-      actualMinutes: sql<number>`coalesce((select sum(${timeEntries.minutes}) from ${timeEntries} where ${timeEntries.taskId} = ${tasks.id}), 0)::int`,
+      actualMinutes: sql<number>`coalesce(sum(${timeEntries.minutes}), 0)::int`,
     })
     .from(tasks)
-    .where(and(eq(tasks.status, "done"), isNotNull(tasks.estimateMinutes), gte(tasks.completedAt, since), wsCond(tasks.workspace, ws)));
+    .leftJoin(timeEntries, eq(timeEntries.taskId, tasks.id))
+    .where(and(eq(tasks.status, "done"), isNotNull(tasks.estimateMinutes), gte(tasks.completedAt, since), wsCond(tasks.workspace, ws)))
+    .groupBy(tasks.id);
   return estimateAccuracy(rows.map((r) => ({ taskType: r.taskType, estimateMinutes: r.estimateMinutes ?? 0, actualMinutes: Number(r.actualMinutes) })));
 }
 

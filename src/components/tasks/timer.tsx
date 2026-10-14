@@ -15,7 +15,6 @@ function useElapsed(startedAt: string | null) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!startedAt) return;
-    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [startedAt]);
@@ -55,7 +54,9 @@ export function RunningTimerPill({ timer }: { timer: RunningTimer }) {
             </span>
             <Link href={`/tasks/${timer.taskId}`} className="min-w-0">
               <div className="truncate text-xs font-semibold text-fg-muted">{timer.title}</div>
-              <div className="font-mono text-sm font-bold tabular-nums text-fg">{formatClock(elapsed)}</div>
+              <div className="font-mono text-sm font-bold tabular-nums text-fg" suppressHydrationWarning>
+                {formatClock(elapsed)}
+              </div>
             </Link>
             <button
               type="button"
@@ -82,7 +83,7 @@ export function TimerControl({ taskId, running, loggedMinutes }: { taskId: strin
     <div className={cn("flex items-center gap-4 rounded-2xl border p-4 transition-colors", mine ? "border-brand/30 bg-brand-soft" : "border-line bg-solid/50")}>
       <div className="min-w-0 flex-1">
         <div className="text-xs font-semibold uppercase tracking-wide text-fg-muted">{mine ? "Timer running" : running ? "Another timer is running" : "Focus timer"}</div>
-        <div className={cn("font-extrabold tabular-nums text-fg", mine ? "font-mono text-2xl" : "text-lg")}>
+        <div className={cn("font-extrabold tabular-nums text-fg", mine ? "font-mono text-2xl" : "text-lg")} suppressHydrationWarning>
           {mine ? formatClock(elapsed) : loggedMinutes ? `${formatMinutes(loggedMinutes)} logged` : "Ready when you are"}
         </div>
         {!mine && running ? <div className="truncate text-xs text-fg-subtle">Starting here stops “{running.title}”</div> : null}

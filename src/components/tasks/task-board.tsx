@@ -25,10 +25,15 @@ const COLUMN_STYLE: Record<BoardColumn, { head: string; glow: string; empty: str
  */
 export function TaskBoard({ tasks, today, showWorkspace = true, showProject = true }: { tasks: TaskView[]; today: string; showWorkspace?: boolean; showProject?: boolean }) {
   const [items, setItems] = useState(tasks);
+  const [synced, setSynced] = useState(tasks);
+  // Fresh server data (after any move or revalidation) replaces the optimistic list.
+  if (synced !== tasks) {
+    setSynced(tasks);
+    setItems(tasks);
+  }
   const [over, setOver] = useState<BoardColumn | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [, start] = useTransition();
-  useEffect(() => setItems(tasks), [tasks]);
 
   function move(id: string, to: BoardColumn) {
     const current = items.find((t) => t.id === id);
