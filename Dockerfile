@@ -1,22 +1,22 @@
 # syntax=docker/dockerfile:1.7
 # Command Center — production image for Cloud Run.
 
-FROM node:22-slim AS deps
+FROM node:24-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-FROM node:22-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx next build \
- && npx esbuild scripts/migrate.mts --bundle --platform=node --format=esm --target=node22 \
+ && npx esbuild scripts/migrate.mts --bundle --platform=node --format=esm --target=node24 \
       --outfile=dist/migrate.mjs \
       --banner:js="import { createRequire } from 'module'; const require = createRequire(import.meta.url);"
 
-FROM node:22-slim AS run
+FROM node:24-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
