@@ -77,8 +77,6 @@ function LostReasonBody({ onCancel, onConfirm, title }: { title?: string; onCanc
   const [reason, setReason] = useState("");
   const QUICK = QUICK_LOST;
   return (
-    <>
-      {(
         <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6">
           <motion.div className="absolute inset-0 bg-[#0b0c1d]/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} />
           <motion.div
@@ -115,8 +113,6 @@ function LostReasonBody({ onCancel, onConfirm, title }: { title?: string; onCanc
             </div>
           </motion.div>
         </div>
-      )}
-    </>
   );
 }
 

@@ -1,3 +1,8 @@
+/**
+ * Server-render smoke test for the Today, Tasks and Projects pages: resolves async server components
+ * by hand, then renders the tree with react-dom/server against fixture data. Catches runtime errors
+ * (bad props, null access, query mistakes) that type-checking cannot.
+ */
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import React, { cloneElement, isValidElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -70,7 +75,6 @@ describe("render smoke", () => {
   it("renders Today", async () => {
     const { default: Page } = await import("@/app/(app)/page");
     const html = await render(React.createElement(Page));
-    console.log("TODAYTEXT", html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 3000));
     expect(html).toContain("Needs you");
     expect(html).toContain("Build homepage");
     expect(html).toContain("CRM rollout");
@@ -102,7 +106,6 @@ describe("render smoke", () => {
     expect(html).toContain("Website revamp");
     const { default: Detail } = await import("@/app/(app)/projects/[id]/page");
     const d = await render(await Detail({ params: Promise.resolve({ id: ids.project }) }));
-    console.log("PROJTEXT", d.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 2500));
     expect(d).toContain("Design sign-off");
     expect(d).toContain("MS-9");
   });

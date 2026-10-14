@@ -4,6 +4,8 @@ import type { ProjectStatus } from "@/db/schema";
 import { requireUser } from "@/server/auth";
 import { getWorkspaceFilter } from "@/server/workspace";
 import { getCompanyOptions, listProjects } from "@/server/tasks/projects";
+import { getRunningTimer } from "@/server/tasks/queries";
+import { RunningTimerPill } from "@/components/tasks/timer";
 import { EmptyState, PageHeader, SubNav } from "@/components/ui/page";
 import { StatTile } from "@/components/ui/stat";
 import { ProjectCard } from "@/components/tasks/project-card";
@@ -31,7 +33,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const filter = FILTERS.find((f) => f.key === key)!;
   const today = todayIST();
 
-  const [list, all, companies] = await Promise.all([listProjects(ws, filter.status), key === "all" ? null : listProjects(ws, null), getCompanyOptions()]);
+  const [list, all, companies, running] = await Promise.all([listProjects(ws, filter.status), key === "all" ? null : listProjects(ws, null), getCompanyOptions(), getRunningTimer()]);
   const everything = all ?? list;
   const counts = new Map<string, number>();
   for (const f of FILTERS) {
@@ -86,6 +88,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           ))}
         </div>
       )}
+
+      <RunningTimerPill timer={running} />
     </>
   );
 }

@@ -222,10 +222,25 @@ export async function toggleTaskDone(id: string, makeDone: boolean): Promise<Tas
   revalidateTaskPages(`/tasks/${id}`, r.task.parentTaskId && `/tasks/${r.task.parentTaskId}`, r.task.projectId && `/projects/${r.task.projectId}`, r.next && `/tasks/${r.next.id}`);
   if (r.already) return { ok: true };
   const isStep = !!r.task.parentTaskId;
+  let lastStep = false;
+  if (isStep) {
+    const open = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.parentTaskId, r.task.parentTaskId!), notInArray(tasks.status, ["done", "cancelled"])))
+      .limit(1);
+    lastStep = open.length === 0;
+  }
   return {
     ok: true,
-    celebrate: !isStep,
-    message: r.next ? `Done! Next one is on ${formatDay(r.next.dueDate, { short: true })}` : isStep ? "Step done" : pickCheer(),
+    celebrate: !isStep || lastStep,
+    message: r.next
+      ? `Done! Next one is on ${formatDay(r.next.dueDate, { short: true })}`
+      : isStep
+        ? lastStep
+          ? "Every step done — tick the task when you're ready!"
+          : "Step done"
+        : pickCheer(),
     overrun: r.overrun,
   };
 }
