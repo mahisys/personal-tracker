@@ -1,4 +1,5 @@
 import {
+  AlarmClock,
   CalendarSync,
   ClipboardCheck,
   FileWarning,
@@ -15,6 +16,7 @@ import {
 import type { RuleMeta } from "@/server/automations/meta";
 
 export const RULE_ICONS: Record<RuleMeta["icon"], LucideIcon> = {
+  alarm: AlarmClock,
   sunrise: Sunrise,
   receipt: Receipt,
   phone: Phone,

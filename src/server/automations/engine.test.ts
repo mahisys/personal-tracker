@@ -71,6 +71,7 @@ async function seedScenario() {
     recurrence: { freq: "weekly", interval: 1 },
     completedAt: istToInstant("2026-10-13", "18:00"),
   });
+  await db.insert(tasks).values({ workspace: "mahisys", title: "Call Ravi", dueDate: "2026-10-20", remindAt: istToInstant("2026-10-14", "08:50") });
   return { fileId: file.id };
 }
 
@@ -101,6 +102,7 @@ describe("runAutomations", () => {
     expect(byKey.recurring_catchup.created).toBe(1);
     expect(byKey.daily_digest.notifications).toBe(1);
     expect(byKey.weekly_review.skipped).toBeTruthy();
+    expect(byKey.task_reminders.notifications).toBe(1);
 
     const chase = await db.select().from(tasks).where(eq(tasks.linkedId, fileId));
     expect(chase[0].title).toBe("Chase Vikram (HDFC Bank): Asha Patil — Documents");

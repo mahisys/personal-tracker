@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import {
+  AlarmClock,
   Bell,
   CalendarSync,
   ClipboardCheck,
@@ -40,6 +41,7 @@ export type AlertItem = {
 export type AlertGroup = { label: string; items: AlertItem[] };
 
 const KIND: Record<string, { icon: LucideIcon; tone: string }> = {
+  task_reminder: { icon: AlarmClock, tone: "text-brand bg-brand-soft" },
   digest: { icon: Sunrise, tone: "text-brand bg-brand-soft" },
   weekly_review: { icon: ClipboardCheck, tone: "text-fuchsia-600 bg-fuchsia-500/12 dark:text-fuchsia-300" },
   bill_due: { icon: Receipt, tone: "text-amber-600 bg-amber-500/14 dark:text-amber-300" },

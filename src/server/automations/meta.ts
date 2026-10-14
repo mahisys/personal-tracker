@@ -5,6 +5,7 @@
  */
 
 export const RULE_KEYS = [
+  "task_reminders",
   "daily_digest",
   "bill_reminders",
   "lead_followups",
@@ -32,7 +33,7 @@ export type RuleMeta = {
   action: string;
   channel: string;
   /** lucide icon name, mapped in the UI */
-  icon: "sunrise" | "receipt" | "phone" | "hourglass" | "file-warning" | "landmark" | "wallet" | "wallet-cards" | "calendar-sync" | "clipboard-check" | "repeat";
+  icon: "alarm" | "sunrise" | "receipt" | "phone" | "hourglass" | "file-warning" | "landmark" | "wallet" | "wallet-cards" | "calendar-sync" | "clipboard-check" | "repeat";
   tone: "brand" | "good" | "warn" | "bad" | "info" | "violet";
   defaultConfig: Record<string, unknown>;
   fields: ConfigField[];
@@ -64,6 +65,18 @@ export const DSA_STAGE_LABELS: Record<string, string> = {
 };
 
 export const RULES: RuleMeta[] = [
+  {
+    key: "task_reminders",
+    name: "Task reminders",
+    description: "Taps you on the shoulder at the reminder time you set on a task.",
+    trigger: "A task's reminder time arrives",
+    action: "Reminds you of the task",
+    channel: "Alert + push",
+    icon: "alarm",
+    tone: "brand",
+    defaultConfig: {},
+    fields: [],
+  },
   {
     key: "daily_digest",
     name: "Morning digest",

@@ -8,6 +8,7 @@ import { decideInvoiceOverdue, reminderMessage, type InvoiceLite } from "./rules
 import { chaseTarget, decidePayoutChase, decideStaleFile, stageLimits } from "./rules/dsa";
 import { decideCashWarning } from "./rules/cash-warning";
 import { decideRenewal } from "./rules/renewals";
+import { decideTaskReminder, type TaskReminderLite } from "./rules/task-reminders";
 import { decideCatchup, type SeriesInstance } from "./rules/recurring";
 import { buildDigest, isDigestDue, type DigestData } from "./rules/digest";
 import { buildWeekly, isWeeklyReviewDue } from "./rules/weekly";
@@ -257,5 +258,31 @@ describe("briefings", () => {
     expect(b.stats[1].value).toBe("11h");
     expect(b.sections[1].items).toHaveLength(2);
     expect(b.summary).toContain("8/10");
+  });
+});
+
+describe("task reminders", () => {
+  const now = istToInstant("2026-10-14", "10:00");
+  const t = (o: Partial<TaskReminderLite> = {}): TaskReminderLite => ({
+    id: "t1", title: "Call Ravi", status: "todo", remindAt: istToInstant("2026-10-14", "09:45"), dueDate: "2026-10-14", dueTime: "11:00", workspace: "mahisys", ...o,
+  });
+  it("fires once remindAt has passed, keyed by the reminder instant", () => {
+    const r = decideTaskReminder(t(), now, "2026-10-14");
+    expect(r?.dedupeKey).toBe(`task_reminder:t1:${istToInstant("2026-10-14", "09:45").toISOString()}`);
+    expect(r?.title).toBe("Call Ravi");
+    expect(r?.body).toBe("Due today (14 Oct) at 11:00");
+  });
+  it("waits for future reminders and ignores ones older than 24h", () => {
+    expect(decideTaskReminder(t({ remindAt: istToInstant("2026-10-14", "10:01") }), now, "2026-10-14")).toBeNull();
+    expect(decideTaskReminder(t({ remindAt: istToInstant("2026-10-13", "10:00") }), now, "2026-10-14")).toBeNull();
+    expect(decideTaskReminder(t({ remindAt: istToInstant("2026-10-13", "10:01") }), now, "2026-10-14")).not.toBeNull();
+  });
+  it("skips done/cancelled tasks and tasks without a reminder", () => {
+    expect(decideTaskReminder(t({ status: "done" }), now, "2026-10-14")).toBeNull();
+    expect(decideTaskReminder(t({ status: "cancelled" }), now, "2026-10-14")).toBeNull();
+    expect(decideTaskReminder(t({ remindAt: null }), now, "2026-10-14")).toBeNull();
+  });
+  it("works without a due date", () => {
+    expect(decideTaskReminder(t({ dueDate: null, dueTime: null }), now, "2026-10-14")?.body).toBe("Reminder");
   });
 });

@@ -16,10 +16,12 @@ import { renewalsRule } from "./rules/renewals";
 import { dailyDigest } from "./rules/digest";
 import { weeklyReview } from "./rules/weekly";
 import { recurringCatchup } from "./rules/recurring";
+import { taskReminders } from "./rules/task-reminders";
 
 /** Order matters a little: tasks are created before the digest summarises them, and catch-up runs first. */
 export const RULE_IMPLS: Record<RuleKey, Rule> = {
   recurring_catchup: recurringCatchup,
+  task_reminders: taskReminders,
   bill_reminders: billReminders,
   lead_followups: leadFollowups,
   stale_leads: staleLeads,
