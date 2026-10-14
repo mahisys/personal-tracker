@@ -2,13 +2,14 @@ import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { connectionConfig } from "./connection";
 
 const globalForDb = globalThis as unknown as { sql?: ReturnType<typeof postgres> };
 
 function createClient() {
-  const url = process.env.DATABASE_URL ?? "postgres://postgres@localhost:5432/command_center";
-  // On Cloud Run, DATABASE_URL points at the Cloud SQL unix socket: postgres://user:pass@/db?host=/cloudsql/<conn>
-  return postgres(url, { max: Number(process.env.DB_POOL_MAX ?? 5), idle_timeout: 30 });
+  // On Cloud Run, DATABASE_URL points at the Cloud SQL unix socket (see connection.ts).
+  const { url, options } = connectionConfig();
+  return postgres(url, { ...options, max: Number(process.env.DB_POOL_MAX ?? 5), idle_timeout: 30 });
 }
 
 const client = globalForDb.sql ?? createClient();

@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (git-ignored). scripts/deploy.sh creates it for you on the first run.
+project_id      = "mahisys-command-center"
+region          = "asia-south1"
+allowed_emails  = "you@example.com"
+alert_email     = "you@example.com"
+billing_account = "" # e.g. 012345-6789AB-CDEF01 — enables the monthly budget alert
+monthly_budget_inr = 3000
+
+# Push notifications: Firebase console > Project settings > Cloud Messaging > Web Push certificates > Generate key pair
+fcm_vapid_key = ""
+
+# Email digests via Gmail API (optional) — see DEPLOY.md "Email"
+gmail_client_id     = ""
+gmail_client_secret = ""
+gmail_refresh_token = ""
+gmail_sender        = ""

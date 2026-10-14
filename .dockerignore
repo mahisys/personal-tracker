@@ -1,0 +1,10 @@
+node_modules
+.next
+.data
+dist
+.git
+.env*
+infra/.terraform
+infra/*.tfstate*
+coverage
+*.log

@@ -43,3 +43,10 @@ next-env.d.ts
 # local data
 /.data
 /dist
+
+# terraform
+infra/.terraform
+infra/*.tfstate*
+infra/terraform.tfvars
+infra/.terraform.lock.hcl
+!.env.example
