@@ -9,6 +9,7 @@ import { buildImportPreview, importStatementLines } from "./import-service";
 import { commitImport, previewStatement } from "./import-actions";
 import { deleteTransaction, saveAccount, saveTransaction } from "./actions";
 import { parseCsv, guessMapping } from "./import";
+import { getAccountTxnCounts, getAccountsWithBalances, getCategoryTotals, getMonthlyTotals, getTotals, getTransactionTotals, listAccountOptions, listTransactions } from "./queries";
 
 async function account(name: string, type: "bank" | "cash" | "credit_card" | "loan" | "upi" | "wallet", opening = 0, ws: "personal" | "mahisys" | "dsa" | null = null) {
   const [a] = await db.insert(accounts).values({ name, type, openingBalancePaise: opening, openingDate: "2026-01-01", workspace: ws }).returning();
@@ -144,5 +145,44 @@ describe("bank statement import", () => {
     const { rows } = parseCsv(CSV);
     const res = await previewStatement({ accountId: bank.id, rows, mapping: { date: 0, description: 1, dateFormat: "DD/MM/YYYY", amountMode: "signed", amount: null }, workspace: "personal" });
     expect(res).toEqual({ ok: false, error: "Pick the amount column" });
+  });
+});
+
+describe("overview queries", () => {
+  beforeEach(resetDb);
+
+  it("totals, monthly series, category spend and filtered lists respect the workspace", async () => {
+    const bank = await account("HDFC", "bank", 0);
+    const dsaBank = await account("DSA current", "bank", 0, "dsa");
+    const [food] = await db.select().from(categories).where(eq(categories.name, "Food & dining"));
+    await createTransaction({ workspace: "personal", type: "expense", date: "2026-10-02", accountId: bank.id, amountPaise: 500_00, categoryId: food.id, party: "Swiggy" });
+    await createTransaction({ workspace: "mahisys", type: "income", date: "2026-10-05", accountId: bank.id, amountPaise: 9_000_00, party: "Acme" });
+    await createTransaction({ workspace: "mahisys", type: "expense", date: "2026-09-10", accountId: bank.id, amountPaise: 1_000_00 });
+    await createTransaction({ workspace: "personal", type: "transfer", date: "2026-10-06", accountId: bank.id, transferAccountId: dsaBank.id, amountPaise: 100_00 });
+
+    expect(await getTotals(null, "2026-10-01", "2026-10-31")).toEqual({ incomePaise: 9_000_00, expensePaise: 500_00, netPaise: 8_500_00 });
+    expect(await getTotals("personal", "2026-10-01", "2026-10-31")).toEqual({ incomePaise: 0, expensePaise: 500_00, netPaise: -500_00 });
+
+    const monthly = await getMonthlyTotals(null, "2026-10-14", 3);
+    expect(monthly).toEqual([
+      { month: "2026-08", incomePaise: 0, expensePaise: 0 },
+      { month: "2026-09", incomePaise: 0, expensePaise: 1_000_00 },
+      { month: "2026-10", incomePaise: 9_000_00, expensePaise: 500_00 },
+    ]);
+
+    const cats = await getCategoryTotals(null, "2026-10-01", "2026-10-31");
+    expect(cats).toEqual([{ categoryId: food.id, name: "Food & dining", totalPaise: 500_00 }]);
+
+    expect((await listTransactions({ q: "swig" })).map((t) => t.party)).toEqual(["Swiggy"]);
+    expect(await listTransactions({ accountId: dsaBank.id })).toHaveLength(1);
+    expect(await listTransactions({ categoryId: "none", type: "expense" })).toHaveLength(1);
+    const rows = await listTransactions({ from: "2026-10-01", to: "2026-10-31" });
+    expect(rows.map((r) => r.date)).toEqual(["2026-10-06", "2026-10-05", "2026-10-02"]);
+    expect(rows[0]).toMatchObject({ accountName: "HDFC", toAccountName: "DSA current" });
+    expect(await getTransactionTotals({ from: "2026-10-01" })).toMatchObject({ count: 3, incomePaise: 9_000_00, expensePaise: 500_00, transferPaise: 100_00 });
+
+    expect((await getAccountsWithBalances("personal")).map((a) => a.name).sort()).toEqual(["Cash in hand", "HDFC"]);
+    expect((await listAccountOptions("dsa")).map((a) => a.name).sort()).toEqual(["Cash in hand", "DSA current", "HDFC"]);
+    expect((await getAccountTxnCounts([dsaBank.id])).get(dsaBank.id)).toBe(1);
   });
 });

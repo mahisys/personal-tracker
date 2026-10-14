@@ -68,14 +68,17 @@ export function useLeadMover() {
 
 /** Asks for a lost reason before moving a lead to a lost stage. */
 export function LostReasonDialog({ open, onCancel, onConfirm, title }: { open: boolean; title?: string; onCancel: () => void; onConfirm: (reason: string) => void }) {
+  return <AnimatePresence>{open ? <LostReasonBody title={title} onCancel={onCancel} onConfirm={onConfirm} /> : null}</AnimatePresence>;
+}
+
+const QUICK_LOST = ["Price too high", "Went with a competitor", "No budget right now", "No response", "Not a fit"];
+
+function LostReasonBody({ onCancel, onConfirm, title }: { title?: string; onCancel: () => void; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState("");
-  const QUICK = ["Price too high", "Went with a competitor", "No budget right now", "No response", "Not a fit"];
-  useEffect(() => {
-    if (open) setReason("");
-  }, [open]);
+  const QUICK = QUICK_LOST;
   return (
-    <AnimatePresence>
-      {open ? (
+    <>
+      {(
         <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6">
           <motion.div className="absolute inset-0 bg-[#0b0c1d]/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} />
           <motion.div
@@ -112,8 +115,8 @@ export function LostReasonDialog({ open, onCancel, onConfirm, title }: { open: b
             </div>
           </motion.div>
         </div>
-      ) : null}
-    </AnimatePresence>
+      )}
+    </>
   );
 }
 
@@ -252,7 +255,12 @@ function LeadCard({ lead, stages, closed, pending, onMove, onDragStart }: { lead
 
 export function PipelineBoard({ stages, leads, closedRecent, view }: { stages: BoardStage[]; leads: PipelineLead[]; closedRecent: PipelineLead[]; view: "board" | "list" }) {
   const [items, setItems] = useState<PipelineLead[]>([...leads, ...closedRecent]);
-  useEffect(() => setItems([...leads, ...closedRecent]), [leads, closedRecent]);
+  // Re-sync with fresh server data after router.refresh().
+  const [source, setSource] = useState({ leads, closedRecent });
+  if (source.leads !== leads || source.closedRecent !== closedRecent) {
+    setSource({ leads, closedRecent });
+    setItems([...leads, ...closedRecent]);
+  }
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
   const [lostFor, setLostFor] = useState<{ lead: PipelineLead; stage: BoardStage } | null>(null);

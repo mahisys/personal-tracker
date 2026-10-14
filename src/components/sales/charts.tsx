@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatINR, formatINRShort } from "@/lib/money";
 import { formatMonth } from "@/lib/dates";
@@ -7,29 +7,33 @@ import { formatMonth } from "@/lib/dates";
 type Tokens = { brand: string; good: string; grid: string; muted: string; surface: string; fg: string };
 const DEFAULT_TOKENS: Tokens = { brand: "#6d5df6", good: "#059669", grid: "rgba(120,112,200,.14)", muted: "#9a97b5", surface: "#ffffff", fg: "#1d1b3a" };
 
+function readTokens(): string {
+  const cs = getComputedStyle(document.documentElement);
+  const dark = document.documentElement.classList.contains("dark");
+  const v = (k: string, f: string) => cs.getPropertyValue(k).trim() || f;
+  const t: Tokens = {
+    brand: v("--brand", DEFAULT_TOKENS.brand),
+    good: dark ? "#10b981" : "#059669",
+    grid: v("--border", DEFAULT_TOKENS.grid),
+    muted: v("--fg-subtle", DEFAULT_TOKENS.muted),
+    surface: v("--bg-solid", DEFAULT_TOKENS.surface),
+    fg: v("--fg", DEFAULT_TOKENS.fg),
+  };
+  return JSON.stringify(t);
+}
+
+function subscribeTheme(cb: () => void) {
+  const obs = new MutationObserver(cb);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => obs.disconnect();
+}
+
+const DEFAULT_JSON = JSON.stringify(DEFAULT_TOKENS);
+
 /** Reads chart colours from the design tokens and follows the light/dark switch. */
 function useTokens(): Tokens {
-  const read = (): Tokens => {
-    const cs = getComputedStyle(document.documentElement);
-    const dark = document.documentElement.classList.contains("dark");
-    const v = (k: string, f: string) => cs.getPropertyValue(k).trim() || f;
-    return {
-      brand: v("--brand", "#6d5df6"),
-      good: dark ? "#10b981" : "#059669",
-      grid: v("--border", "rgba(120,112,200,.14)"),
-      muted: v("--fg-subtle", "#9a97b5"),
-      surface: v("--bg-solid", "#ffffff"),
-      fg: v("--fg", "#1d1b3a"),
-    };
-  };
-  const [t, setT] = useState<Tokens>(DEFAULT_TOKENS);
-  useEffect(() => {
-    setT(read());
-    const obs = new MutationObserver(() => setT(read()));
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-  return t;
+  const json = useSyncExternalStore(subscribeTheme, readTokens, () => DEFAULT_JSON);
+  return useMemo(() => JSON.parse(json) as Tokens, [json]);
 }
 
 function TooltipBox({ title, rows }: { title: string; rows: { label: string; value: number; color: string }[] }) {

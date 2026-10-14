@@ -6,7 +6,7 @@ import { resetDb } from "@/test/db";
 import { getAccountBalances } from "@/server/ledger";
 import { applySuggestions, markRenewed, moveBillAction, payBill, saveBill, skipBillAction } from "./actions";
 import { getCashForecast } from "./forecast";
-import { getSeries } from "./queries";
+import { getBill, getSeries, listRecentlyPaid, listRenewals, listUpcomingBills } from "./queries";
 
 function form(obj: Record<string, string | string[]>) {
   const f = new FormData();
@@ -69,6 +69,11 @@ describe("bills", () => {
     const third = (await db.select().from(bills).where(eq(bills.status, "upcoming")))[0];
     expect(third.dueDate).toBe("2026-03-31");
 
+    expect((await listUpcomingBills("personal")).map((b) => [b.title, b.accountName, b.categoryName])).toEqual([["Car EMI", "HDFC", "EMI & loan repayment"]]);
+    expect(await listUpcomingBills("dsa")).toHaveLength(0);
+    expect((await listRecentlyPaid(null)).map((b) => b.paidDate)).toEqual(["2026-02-28", "2026-01-30"]);
+    expect((await getBill(third.id))?.accountName).toBe("HDFC");
+    expect(await listRenewals(null)).toEqual([]);
     const series = await getSeries(third);
     expect(series.map((s) => s.status)).toEqual(["upcoming", "paid", "paid"]);
     expect(series[1].payment?.amountPaise).toBe(15_000_00);

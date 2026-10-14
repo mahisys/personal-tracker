@@ -130,7 +130,7 @@ export function DocumentForm({
   const addRow = () => setRows((rs) => [...rs, withKey(emptyRow(rs[rs.length - 1]?.gstRate ?? "18"))]);
   const removeRow = (key: string) => setRows((rs) => (rs.length === 1 ? [withKey(emptyRow())] : rs.filter((r) => r.key !== key)));
 
-  const itemsJson = JSON.stringify(rows.map(({ key: _k, ...r }) => r));
+  const itemsJson = JSON.stringify(rows.map((r) => ({ description: r.description, hsnSac: r.hsnSac, quantity: r.quantity, unitPrice: r.unitPrice, gstRate: r.gstRate })));
   const posName = INDIAN_STATES.find((s) => s.code === pos)?.name;
 
   return (
