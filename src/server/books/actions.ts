@@ -146,8 +146,8 @@ export async function saveAccount(_: ActionResult, form: FormData): Promise<Acti
   const openingRaw = str(form, "openingBalance");
   let opening = openingRaw == null ? 0 : parseRupeesToPaise(openingRaw);
   if (opening == null) return fail("Opening balance should be a number like 25000 or -12000");
-  // For cards and loans people usually type what they owe as a positive number.
-  if ((type === "credit_card" || type === "loan") && bool(form, "owed") && opening > 0) opening = -opening;
+  // For cards and loans the form asks what you owe (positive); balances store it as negative.
+  if ((type === "credit_card" || type === "loan") && bool(form, "owed") && opening !== 0) opening = -opening;
   const openingDate = day(form, "openingDate") ?? todayIST();
   const limitRaw = str(form, "creditLimit");
   const creditLimitPaise = limitRaw == null ? null : parseRupeesToPaise(limitRaw);

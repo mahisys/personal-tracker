@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
 import { activityLog, milestones, projects, tasks, timeEntries, type WorkspaceKey } from "@/db/schema";
@@ -222,7 +222,7 @@ export async function minutesLoggedOn(day: string): Promise<number> {
   const [row] = await db
     .select({ m: sql<number>`coalesce(sum(${timeEntries.minutes}), 0)::int` })
     .from(timeEntries)
-    .where(and(gte(timeEntries.startedAt, istToInstant(day)), sql`${timeEntries.startedAt} < ${istToInstant(addDays(day, 1))}`));
+    .where(and(gte(timeEntries.startedAt, istToInstant(day)), lt(timeEntries.startedAt, istToInstant(addDays(day, 1)))));
   return Number(row?.m ?? 0);
 }
 

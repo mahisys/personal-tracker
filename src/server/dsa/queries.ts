@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
@@ -32,7 +32,7 @@ const fileCols = {
 
 export type FileRow = Awaited<ReturnType<typeof listFiles>>[number];
 
-export async function listFiles(where?: Parameters<typeof and>[0]) {
+export async function listFiles(where?: SQL) {
   return db
     .select(fileCols)
     .from(loanFiles)

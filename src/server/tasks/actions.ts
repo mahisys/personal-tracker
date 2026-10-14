@@ -1,6 +1,7 @@
 "use server";
 import { and, eq, isNull, ne, notInArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { projects, tasks, TASK_STATUSES, timeEntries, type TaskStatus } from "@/db/schema";
 import { requireUser } from "@/server/auth";
@@ -173,7 +174,9 @@ export async function deleteTask(_: ActionResult, form: FormData): Promise<Actio
   });
   revalidateTaskPages(row.projectId && `/projects/${row.projectId}`, row.parentTaskId && `/tasks/${row.parentTaskId}`);
   const back = str(form, "redirectTo");
-  return done("Task deleted", back ? { redirectTo: back } : {});
+  // Leave the deleted task's page with a real redirect (its own page would 404 on refresh).
+  if (back && back.startsWith("/") && !back.startsWith("//")) redirect(back);
+  return done("Task deleted");
 }
 
 export async function addSubtask(_: ActionResult, form: FormData): Promise<ActionResult> {

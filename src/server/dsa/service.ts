@@ -259,23 +259,19 @@ export async function setFilePayoutRate(fileId: string, rateBps: number, saveToG
   await logActivity(ENTITY, file.id, "payout_rate", `Payout rate set to ${bpsToPercent(rateBps)}%`, null, conn);
   const payout = await payoutForFile(file.id, conn);
   if (payout && payout.status === "expected" && file.disbursedPaise) {
-    // Re-run with the grid first, then the manual rate as fallback.
-    if (!saveToGrid) {
-      const { finance } = await getSettings();
-      let shareBps = 0;
-      if (payout.subConnectorId) {
-        const [sc] = await conn.select().from(subConnectors).where(eq(subConnectors.id, payout.subConnectorId));
-        shareBps = sc?.shareBps ?? 0;
-      }
-      const a = computePayout(file.disbursedPaise, rateBps, { gstBps: finance.commissionGstBps, tdsBps: finance.commissionTdsBps, subShareBps: shareBps });
-      await conn
-        .update(payouts)
-        .set({ grossPaise: a.grossPaise, gstPaise: a.gstPaise, tdsPaise: a.tdsPaise, subConnectorSharePaise: a.subConnectorSharePaise })
-        .where(eq(payouts.id, payout.id));
-      await conn.update(loanFiles).set({ expectedPayoutPaise: a.grossPaise }).where(eq(loanFiles.id, file.id));
-    } else {
-      await upsertExpectedPayout(file.id, conn);
+    // The rate typed by hand always wins for this file, even if a narrower grid row exists.
+    const { finance } = await getSettings();
+    let shareBps = 0;
+    if (payout.subConnectorId) {
+      const [sc] = await conn.select().from(subConnectors).where(eq(subConnectors.id, payout.subConnectorId));
+      shareBps = sc?.shareBps ?? 0;
     }
+    const a = computePayout(file.disbursedPaise, rateBps, { gstBps: finance.commissionGstBps, tdsBps: finance.commissionTdsBps, subShareBps: shareBps });
+    await conn
+      .update(payouts)
+      .set({ grossPaise: a.grossPaise, gstPaise: a.gstPaise, tdsPaise: a.tdsPaise, subConnectorSharePaise: a.subConnectorSharePaise })
+      .where(eq(payouts.id, payout.id));
+    await conn.update(loanFiles).set({ expectedPayoutPaise: a.grossPaise }).where(eq(loanFiles.id, file.id));
   }
 }
 

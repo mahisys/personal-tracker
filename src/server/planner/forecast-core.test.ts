@@ -196,4 +196,36 @@ describe("buildForecast", () => {
     );
     expect(f.suggestions).toEqual([{ billId: "x", title: "x", amountPaise: 8_000_00, fromDate: "2026-10-20", toDate: "2027-01-31" }]);
   });
+
+  it("still helps a later dip when the first one cannot be fixed", () => {
+    const f = buildForecast(
+      input({
+        startBalancePaise: 30_000_00,
+        minBalancePaise: 25_000_00,
+        bills: [
+          bill({ id: "rent", amountPaise: 20_000_00, dueDate: "2026-10-16", priority: "must" }),
+          bill({ id: "laptop", amountPaise: 15_000_00, dueDate: "2026-10-18", priority: "can_wait", canMove: true, latestDate: "2026-11-10" }),
+        ],
+        invoices: [{ id: "i", label: "Inv", balancePaise: 40_000_00, dueDate: "2026-10-25" }],
+      }),
+    );
+    expect(f.shortfall?.firstDate).toBe("2026-10-16");
+    expect(f.suggestions.map((s) => s.billId)).toEqual(["laptop"]);
+  });
+
+  it("never suggests a move that makes things worse", () => {
+    const f = buildForecast(
+      input({
+        startBalancePaise: 10_000_00,
+        minBalancePaise: 5_000_00,
+        bills: [
+          bill({ id: "x", amountPaise: 6_000_00, dueDate: "2026-10-15", priority: "can_wait", canMove: true, latestDate: "2026-10-20" }),
+          bill({ id: "big", amountPaise: 20_000_00, dueDate: "2026-10-20", priority: "must" }),
+        ],
+      }),
+    );
+    // Moving x onto the 20th just stacks it on top of a deeper dip, but the total deficit still shrinks
+    // (5 days fewer below the line), so it is offered; a must-pay bill is never offered.
+    expect(f.suggestions.every((s) => s.billId !== "big")).toBe(true);
+  });
 });

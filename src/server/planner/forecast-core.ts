@@ -176,34 +176,51 @@ export function buildForecast(input: ForecastInput): CashForecast {
   const suggestions: ForecastSuggestion[] = [];
   if (dip) {
     const billsById = new Map(input.bills.map((b) => [b.id, b]));
-    // Mutable copy of the real (non-virtual) movable bill flows.
-    const flows = [...inflows, ...outflows.map((f) => ({ ...f }))];
+    const flows: Flow[] = [...inflows, ...outflows];
     const moved = new Set<string>();
+    const deficitOf = (s: ForecastDay[]) => s.reduce((sum, d) => sum + Math.max(0, input.minBalancePaise - d.balancePaise), 0);
+    const withMove = (f: Flow, to: string): Flow[] => {
+      const i = flows.indexOf(f);
+      const copy = [...flows];
+      if (to <= end) copy[i] = { ...f, date: to };
+      else copy.splice(i, 1);
+      return copy;
+    };
+    const byPreference = (a: Flow, b: Flow) => {
+      const pa = PRIORITY_ORDER[billsById.get(a.item.id)!.priority];
+      const pb = PRIORITY_ORDER[billsById.get(b.item.id)!.priority];
+      if (pa !== pb) return pa - pb;
+      if (a.item.amountPaise !== b.item.amountPaise) return b.item.amountPaise - a.item.amountPaise;
+      return a.date.localeCompare(b.date);
+    };
     for (let guard = 0; guard < 200; guard++) {
-      const s = projectDays(input.today, days, input.startBalancePaise, flows);
-      const d = firstDip(s, input.minBalancePaise);
-      if (!d) break;
-      const candidates = flows
-        .filter((f) => f.dir === "out" && f.item.movable && !moved.has(f.item.id))
-        .filter((f) => {
-          const b = billsById.get(f.item.id)!;
-          return f.date <= d.date && !!b.latestDate && b.latestDate > d.date;
-        })
-        .sort((a, b) => {
-          const pa = PRIORITY_ORDER[billsById.get(a.item.id)!.priority];
-          const pb = PRIORITY_ORDER[billsById.get(b.item.id)!.priority];
-          if (pa !== pb) return pa - pb;
-          if (a.item.amountPaise !== b.item.amountPaise) return b.item.amountPaise - a.item.amountPaise;
-          return a.date.localeCompare(b.date);
-        });
-      const pick = candidates[0];
-      if (!pick) break;
-      const bill = billsById.get(pick.item.id)!;
-      suggestions.push({ billId: bill.id, title: bill.title, amountPaise: bill.amountPaise, fromDate: pick.date, toDate: bill.latestDate! });
-      moved.add(bill.id);
-      const idx = flows.indexOf(pick);
-      if (bill.latestDate! <= end) flows[idx] = { ...pick, date: bill.latestDate! };
-      else flows.splice(idx, 1);
+      const current = projectDays(input.today, days, input.startBalancePaise, flows);
+      const deficit = deficitOf(current);
+      if (deficit === 0) break;
+      // Walk the dip days in order; at each, try flexible bills that fall on or before it and can wait past it.
+      let applied = false;
+      for (const d of current.filter((x) => x.balancePaise < input.minBalancePaise)) {
+        const candidates = flows
+          .filter((f) => f.dir === "out" && f.item.movable && !moved.has(f.item.id))
+          .filter((f) => {
+            const b = billsById.get(f.item.id)!;
+            return f.date <= d.date && !!b.latestDate && b.latestDate > d.date;
+          })
+          .sort(byPreference);
+        for (const pick of candidates) {
+          const bill = billsById.get(pick.item.id)!;
+          const next = withMove(pick, bill.latestDate!);
+          // Only suggest moves that make the overall picture better.
+          if (deficitOf(projectDays(input.today, days, input.startBalancePaise, next)) >= deficit) continue;
+          suggestions.push({ billId: bill.id, title: bill.title, amountPaise: bill.amountPaise, fromDate: pick.date, toDate: bill.latestDate! });
+          moved.add(bill.id);
+          flows.splice(0, flows.length, ...next);
+          applied = true;
+          break;
+        }
+        if (applied) break;
+      }
+      if (!applied) break;
     }
   }
 

@@ -1,6 +1,7 @@
 "use server";
 import { and, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { companies, milestones, PROJECT_STATUSES, projects, type ProjectStatus } from "@/db/schema";
 import { requireUser } from "@/server/auth";
@@ -92,7 +93,7 @@ export async function deleteProject(_: ActionResult, form: FormData): Promise<Ac
   const [row] = await db.delete(projects).where(eq(projects.id, id)).returning();
   if (!row) return fail("Project not found");
   revalidateProject();
-  return done(`Deleted “${row.name}”. Its tasks are still on your list.`, { redirectTo: "/projects" });
+  redirect("/projects");
 }
 
 export async function addMilestone(_: ActionResult, form: FormData): Promise<ActionResult> {
