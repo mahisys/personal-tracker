@@ -70,9 +70,9 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       />
 
       <div className="stagger mb-6 grid grid-cols-3 gap-3">
-        <StatTile label="Billed" value={formatINRShort(billed)} tone="brand" />
-        <StatTile label="Outstanding" value={formatINRShort(outstanding)} tone={outstanding ? "warn" : "good"} />
-        <StatTile label="Open pipeline" value={formatINRShort(pipeline)} tone="violet" />
+        <StatTile label="Billed" className="p-3.5 sm:p-5" value={formatINRShort(billed)} tone="brand" />
+        <StatTile label="Outstanding" className="p-3.5 sm:p-5" value={formatINRShort(outstanding)} tone={outstanding ? "warn" : "good"} />
+        <StatTile label="Open pipeline" className="p-3.5 sm:p-5" value={formatINRShort(pipeline)} tone="violet" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
