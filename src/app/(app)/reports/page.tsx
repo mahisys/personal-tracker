@@ -50,7 +50,7 @@ export default async function ProfitAndLossPage({ searchParams }: { searchParams
         <CardHeader title="Month by month" description={`${label} · income, expense and net`} />
         <CardBody>
           {t.income || t.expense ? (
-            <PnlChart data={pnl.months.map((m) => ({ label: monthShort(m.month), income: m.income, expense: m.expense, net: m.net }))} />
+            <PnlChart data={pnl.months.map((m) => (m.month > todayIST().slice(0, 7) ? { label: monthShort(m.month), income: null, expense: null, net: null } : { label: monthShort(m.month), income: m.income, expense: m.expense, net: m.net }))} />
           ) : (
             <EmptyState title="No money recorded in this year yet" description="Add income and expenses in Books and your P&L draws itself here." className="py-10" />
           )}

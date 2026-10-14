@@ -45,15 +45,15 @@ export function StatTile({
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold text-fg-muted">{label}</div>
-          <div className="mt-1.5 truncate text-2xl font-extrabold tracking-tight tabular-nums text-fg">{value}</div>
+          <div className="mt-1.5 break-words text-[20px] leading-tight font-extrabold tracking-tight tabular-nums text-fg sm:text-2xl">{value}</div>
           {sub ? <div className="mt-1 text-xs text-fg-muted">{sub}</div> : null}
         </div>
-        {icon ? <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", toneIcon[tone])}>{icon}</div> : null}
+        {icon ? <div className={cn("hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl min-[420px]:flex", toneIcon[tone])}>{icon}</div> : null}
       </div>
     </>
   );
   const cls = cn(
-    "glass relative block overflow-hidden rounded-[var(--radius-card)] border border-line p-5 shadow-card transition-all duration-300",
+    "glass relative block overflow-hidden rounded-[var(--radius-card)] border border-line p-4 shadow-card transition-all duration-300 sm:p-5",
     href && "hover:-translate-y-0.5 hover:shadow-pop",
     className,
   );

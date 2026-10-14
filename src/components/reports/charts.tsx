@@ -73,7 +73,7 @@ function Grad({ id, color }: { id: string; color: string }) {
 }
 
 /** Income vs expense bars per month with the net as a line — one axis (all rupees). */
-export function PnlChart({ data }: { data: { label: string; income: number; expense: number; net: number }[] }) {
+export function PnlChart({ data }: { data: { label: string; income: number | null; expense: number | null; net: number | null }[] }) {
   const gid = useId().replace(/:/g, "");
   return (
     <div className={cn("w-full", wrap)}>
