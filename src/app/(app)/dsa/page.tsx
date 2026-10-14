@@ -255,7 +255,7 @@ export default async function DsaPage({ searchParams }: { searchParams: Promise<
           />
         ) : view === "board" ? (
           <>
-            <p className="mb-3 text-xs text-fg-subtle">Drag a card to move it, or tap ⇄ on a card. Amber = over the stage's time limit, rose = twice over.</p>
+            <p className="mb-3 text-xs text-fg-subtle">Drag a card to move it, or tap ⇄ on a card. Amber = over the stage&apos;s time limit, rose = twice over.</p>
             <Board cards={cards} lenders={activeLenders} accounts={accounts} today={today} />
           </>
         ) : (
@@ -293,7 +293,7 @@ export default async function DsaPage({ searchParams }: { searchParams: Promise<
                               <ProductTag product={f.file.product} short />
                               <span className="text-xs font-semibold tabular-nums text-fg-muted">{formatINRShort(f.file.disbursedPaise ?? f.file.sanctionedPaise ?? f.file.amountRequestedPaise)}</span>
                             </div>
-                            <p className={cn("mt-0.5 text-sm", f.file.pendingNote ? "text-fg" : "italic text-fg-subtle")}>{f.file.pendingNote || "No note — open the file to add what's pending"}</p>
+                            <p className={cn("mt-0.5 text-sm", f.file.pendingNote ? "text-fg" : "italic text-fg-subtle")}>{f.file.pendingNote || "No note — open the file to add what&apos;s pending"}</p>
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               <StageBadge stage={f.file.stage} />
                               {f.lenderName ? <span className="text-xs text-fg-muted">{f.lenderName}</span> : null}

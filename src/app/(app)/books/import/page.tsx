@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { requireUser } from "@/server/auth";
 import { getWorkspaceFilter } from "@/server/workspace";
@@ -29,7 +30,7 @@ export default async function ImportPage() {
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-300" />
             <p>Safe to re-import: lines already in your books are recognised and skipped, so overlapping statements never double count.</p>
           </div>
-          <p className="px-1">Categories are suggested from each category&apos;s keywords. Add keywords on the <a href="/books/categories" className="font-semibold text-brand">Categories</a> page and future imports get smarter.</p>
+          <p className="px-1">Categories are suggested from each category&apos;s keywords. Add keywords on the <Link href="/books/categories" className="font-semibold text-brand">Categories</Link> page and future imports get smarter.</p>
         </aside>
       </div>
     </>

@@ -53,6 +53,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     categoryId: one(sp.categoryId),
     type: TRANSACTION_TYPES.includes(typeParam as TransactionType) ? (typeParam as TransactionType) : null,
     q: one(sp.q),
+    billId: one(sp.billId),
   };
 
   const [rows, totals, accountOptions, categories] = await Promise.all([listTransactions(filters), getTransactionTotals(filters), listAccountOptions(), listCategories()]);
@@ -67,6 +68,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       categoryId: filters.categoryId,
       type: filters.type,
       q: filters.q,
+      billId: filters.billId,
       ...over,
     };
     for (const [k, v] of Object.entries(base)) if (v != null && (v !== "" || k === "from" || k === "to")) p.set(k, v);
@@ -76,7 +78,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const byDate = new Map<string, TxnRow[]>();
   for (const r of rows) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]);
   const net = totals.incomePaise - totals.expensePaise;
-  const filtered = !!(filters.accountId || filters.categoryId || filters.type || filters.q || wsParam);
+  const filtered = !!(filters.accountId || filters.categoryId || filters.type || filters.q || wsParam || filters.billId);
 
   return (
     <>
@@ -153,7 +155,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             ))}
           </Select>
           <div className="col-span-2 flex gap-2 md:col-span-4 lg:col-span-8 lg:justify-end">
-            {filtered ? <LinkButton href={params({ accountId: null, categoryId: null, type: null, q: null, ws: null })} variant="ghost" size="sm">Clear filters</LinkButton> : null}
+            {filtered ? <LinkButton href={params({ accountId: null, categoryId: null, type: null, q: null, ws: null, billId: null })} variant="ghost" size="sm">Clear filters</LinkButton> : null}
             <Button type="submit" size="sm" variant="soft">Apply</Button>
           </div>
         </form>

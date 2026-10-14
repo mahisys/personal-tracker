@@ -1,18 +1,19 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { ModalCloseContext } from "@/components/client/action-form";
 import { cn } from "@/lib/cn";
 
+const noopSubscribe = () => () => {};
+
 /**
  * A controlled dialog (bottom sheet on phones) — like <Modal> but opened from code, e.g. after a
  * card is dropped on a column that needs more details. An <ActionForm> inside closes it on success.
  */
 export function Dialog({ open, onClose, title, description, children, wide }: { open: boolean; onClose: () => void; title: ReactNode; description?: ReactNode; children: ReactNode; wide?: boolean }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

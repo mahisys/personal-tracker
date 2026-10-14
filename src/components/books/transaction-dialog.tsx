@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown } from "lucide-react";
 import type { AccountType, TransactionType, WorkspaceKey } from "@/db/schema";
@@ -102,7 +103,7 @@ function TransactionFormBody({ accounts, categories, defaults, lockType }: { acc
   if (accounts.length === 0) {
     return (
       <div className="rounded-2xl bg-muted p-5 text-sm text-fg-muted">
-        Add an account first — <a className="font-semibold text-brand" href="/books/accounts?new=1">create one</a> for your bank, cash or card.
+        Add an account first — <Link className="font-semibold text-brand" href="/books/accounts?new=1">create one</Link> for your bank, cash or card.
       </div>
     );
   }

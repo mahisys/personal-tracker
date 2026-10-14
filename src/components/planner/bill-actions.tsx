@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CalendarArrowUp, Check, SkipForward } from "lucide-react";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/client/action-form";
 import { Modal, ModalActions } from "@/components/client/modal";
@@ -27,7 +28,7 @@ export function PayBillDialog({ bill, accounts, categories, size = "sm", label =
   return (
     <Modal trigger={<><Check className="h-3.5 w-3.5" /> {label}</>} title={`Pay ${bill.title}`} description={`${formatINR(bill.amountPaise)} due ${formatDay(bill.dueDate)}`} variant="success" size={size}>
       {payable.length === 0 ? (
-        <p className="text-sm text-fg-muted">Add a bank, cash or card account in <a className="font-semibold text-brand" href="/books/accounts?new=1">Books</a> first.</p>
+        <p className="text-sm text-fg-muted">Add a bank, cash or card account in <Link className="font-semibold text-brand" href="/books/accounts?new=1">Books</Link> first.</p>
       ) : (
         <ActionForm action={payBill}>
           <input type="hidden" name="id" value={bill.id} />

@@ -53,6 +53,7 @@ export function DocumentForm({
   leads = [],
   initial,
   submitLabel,
+  stacked,
 }: {
   kind: "invoice" | "quote";
   action: Action;
@@ -65,6 +66,8 @@ export function DocumentForm({
   leads?: LeadOpt[];
   initial: DocumentInitial;
   submitLabel: string;
+  /** Single column (for use inside a modal) */
+  stacked?: boolean;
 }) {
   const [workspace, setWorkspace] = useState<WorkspaceKey>(initial.workspace);
   const [companyId, setCompanyId] = useState(initial.companyId ?? "");
@@ -131,7 +134,7 @@ export function DocumentForm({
   const posName = INDIAN_STATES.find((s) => s.code === pos)?.name;
 
   return (
-    <ActionForm action={action} resetOnSuccess={false} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <ActionForm action={action} resetOnSuccess={false} className={cn("grid gap-6", !stacked && "lg:grid-cols-[minmax(0,1fr)_320px]")}>
       {initial.id ? <input type="hidden" name="id" value={initial.id} /> : null}
       <input type="hidden" name="items" value={itemsJson} />
       <input type="hidden" name="workspace" value={workspace} />
@@ -311,7 +314,7 @@ export function DocumentForm({
         </Card>
       </div>
 
-      <div className="lg:sticky lg:top-24 lg:self-start">
+      <div className={cn(!stacked && "lg:sticky lg:top-24 lg:self-start")}>
         <Card className="overflow-hidden">
           <div className="space-y-4 p-5">
             <div className="grid grid-cols-2 gap-3">
