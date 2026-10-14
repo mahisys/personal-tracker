@@ -77,7 +77,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         actions={<NewTaskButton key={one(sp.new) === "1" ? "open" : "closed"} projects={projects} taskTypes={taskTypes} values={prefill} defaultOpen={one(sp.new) === "1"} />}
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 stagger">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 stagger">
         <MiniStat icon={<Flame className="h-4 w-4" />} label="Overdue" value={overdue} tone={overdue ? "bad" : "good"} sub={overdue ? "Tackle or snooze these first" : "Nothing overdue"} />
         <MiniStat icon={<CalendarCheck2 className="h-4 w-4" />} label="Due today" value={dueToday} tone={dueToday ? "warn" : "good"} sub={dueToday ? "You've got this" : "Free day ahead"} />
         <MiniStat
@@ -85,9 +85,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           label="Queue clears"
           value={eta.queueFinishDate ? (eta.queueFinishDate === today ? "Today" : formatDay(eta.queueFinishDate, { short: true })) : "—"}
           tone="brand"
+          className="col-span-2 sm:col-span-1"
           sub={eta.skipped.length ? `${eta.skipped.length} task${eta.skipped.length === 1 ? "" : "s"} without an estimate` : "Based on your daily hours"}
         />
-        <EstimateInsight accuracy={accuracy} />
+        <EstimateInsight accuracy={accuracy} className="col-span-2 sm:col-span-1" />
       </div>
 
       <Suspense>
@@ -117,7 +118,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   );
 }
 
-function MiniStat({ icon, label, value, sub, tone }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub: string; tone: "bad" | "warn" | "good" | "brand" }) {
+function MiniStat({ icon, label, value, sub, tone, className }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub: string; tone: "bad" | "warn" | "good" | "brand"; className?: string }) {
   const t = {
     bad: "bg-rose-500/12 text-rose-600 dark:text-rose-300",
     warn: "bg-amber-500/14 text-amber-600 dark:text-amber-300",
@@ -125,7 +126,7 @@ function MiniStat({ icon, label, value, sub, tone }: { icon: React.ReactNode; la
     brand: "bg-brand-soft text-brand",
   }[tone];
   return (
-    <div className="glass flex items-center gap-3 rounded-[var(--radius-card)] border border-line p-4 shadow-card">
+    <div className={cn("glass flex min-w-0 items-center gap-3 rounded-[var(--radius-card)] border border-line p-4 shadow-card", className)}>
       <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", t)}>{icon}</div>
       <div className="min-w-0">
         <div className="text-xs font-semibold text-fg-muted">{label}</div>

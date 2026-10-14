@@ -154,4 +154,18 @@ describe("runAutomations", () => {
     expect(res.rules[0].notifications).toBe(0);
     expect(res.rules[0].skipped).toContain("08:00");
   });
+
+  it("sends the weekly review on the review day after 6 pm, once", async () => {
+    await seedScenario();
+    const [acct] = await db.execute<{ id: string }>(sql`select id from accounts limit 1`);
+    await db.execute(sql`insert into transactions (workspace, type, date, account_id, amount_paise) values ('mahisys', 'income', '2026-10-15', ${acct.id}, 500000)`);
+    const sunday = istToInstant("2026-10-18", "18:30");
+    const res = await runAutomations({ now: sunday, trigger: "test", only: ["weekly_review"] });
+    expect(res.rules[0]).toMatchObject({ ok: true, notifications: 1 });
+    const [n] = await db.select().from(notifications).where(eq(notifications.kind, "weekly_review"));
+    expect(n.title).toContain("Your week in review");
+    expect(n.body).toContain("1/1 planned tasks done"); // the maid task due 13 Oct is done
+    const again = await runAutomations({ now: new Date(sunday.getTime() + 15 * 60_000), trigger: "test", only: ["weekly_review"] });
+    expect(again.rules[0].notifications).toBe(0);
+  });
 });
