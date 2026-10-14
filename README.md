@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Command Center
 
-## Getting Started
+A private app for running everything in one place: **Personal**, **MahiSys** and the **Loan DSA** business.
+Tasks and projects with estimates and ETAs, a CRM and sales pipeline, GST invoicing, books of account,
+an upcoming-payments planner with a cash-flow forecast, a DSA desk from borrower lead to payout received,
+and automations that tell you each morning what needs you.
 
-First, run the development server:
+Runs only on **Google Cloud** (Cloud Run, Cloud SQL, Cloud Storage, Identity Platform, FCM, Cloud Scheduler).
+Works on a laptop and installs on your phone as an app.
+
+- **Deploy:** see [DEPLOY.md](./DEPLOY.md) — one command in Cloud Shell: `bash scripts/deploy.sh`
+- **How the code is organised:** see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+
+## Modules
+
+| Module | What it does |
+| --- | --- |
+| Today | One prioritised list of everything due: tasks, follow-ups, bills, overdue invoices, DSA files to chase |
+| Tasks & projects | Priorities, due dates, recurrence, subtasks, kanban, timers, estimates, ETA, estimate accuracy |
+| CRM & sales | Leads pipeline, contacts, companies, activity log, follow-ups, quotes, monthly targets |
+| Invoices | GST tax invoices (CGST/SGST/IGST), PDF, payments with TDS, receivables |
+| Books | Accounts, income, expenses, transfers, categories, budgets, bank statement CSV import |
+| Planner | Bills, EMIs, subscriptions; priority and "can move" dates; 90-day cash-flow forecast; renewals |
+| DSA desk | Borrowers, loan files by stage, document checklists, pendency board, lenders and payout grid, payouts, sub-connectors, earnings |
+| Automations | Daily digest, reminders, stale lead/file chasers, overdue invoices, payout chase, cash warnings, weekly review |
+| Reports | P&L by workspace, expenses by category, receivables ageing, GST summary, budget vs actual, time |
+
+## Tech
+
+Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Drizzle ORM · PostgreSQL 16 ·
+Tailwind CSS v4 · motion · Recharts · Firebase Auth & Cloud Messaging · Terraform.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
+npm run db:migrate
+npm run dev       # http://localhost:3000
+npm test
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
