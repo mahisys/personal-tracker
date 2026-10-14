@@ -46,7 +46,7 @@ export function ForecastChart({ days, minBalancePaise, lowest }: { days: Forecas
           </defs>
           <CartesianGrid vertical={false} stroke="var(--border)" />
           <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--fg-subtle)", fontSize: 11 }} tickFormatter={(d: string) => formatDay(d, { short: true })} minTickGap={36} />
-          <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--fg-subtle)", fontSize: 11 }} width={52} tickFormatter={(v: number) => formatINRShort(v)} domain={[min - pad, max + pad]} />
+          <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--fg-subtle)", fontSize: 11 }} width={52} tickFormatter={(v: number) => formatINRShort(v)} domain={[min >= 0 ? 0 : min - pad, max + pad]} />
           <ReferenceLine y={minBalancePaise} stroke={RED} strokeOpacity={0.7} strokeDasharray="5 5" label={{ value: `Cushion ${formatINRShort(minBalancePaise)}`, position: "insideTopRight", fill: "var(--fg-muted)", fontSize: 11 }} />
           <Tooltip
             cursor={{ stroke: "var(--border-strong)", strokeDasharray: "3 3" }}
@@ -75,7 +75,7 @@ export function ForecastChart({ days, minBalancePaise, lowest }: { days: Forecas
               );
             }}
           />
-          <Area type="monotone" dataKey="balancePaise" stroke={`url(#fc-stroke-${id})`} strokeWidth={2.25} fill={`url(#fc-fill-${id})`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-solid)", fill: "var(--brand)" }} animationDuration={900} />
+          <Area type="monotone" dataKey="balancePaise" stroke={split >= 1 ? "var(--brand)" : `url(#fc-stroke-${id})`} strokeWidth={2.25} fill={`url(#fc-fill-${id})`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--bg-solid)", fill: "var(--brand)" }} animationDuration={900} />
           <ReferenceDot x={lowest.date} y={lowest.balancePaise} r={5} fill={lowest.balancePaise < minBalancePaise ? RED : "var(--brand)"} stroke="var(--bg-solid)" strokeWidth={2} label={{ value: `Low ${formatINRShort(lowest.balancePaise)}`, position: "bottom", fill: "var(--fg-muted)", fontSize: 11, fontWeight: 700 }} />
         </AreaChart>
       </ResponsiveContainer>

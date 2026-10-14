@@ -9,7 +9,7 @@ import { isActive } from "./sidebar";
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="glass fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-line shadow-pop lg:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed inset-x-3 bottom-3 z-50 bg-solid/92 backdrop-blur-xl rounded-2xl border border-line shadow-pop lg:hidden pb-[env(safe-area-inset-bottom)]">
       <ul className="flex items-stretch justify-around">
         {MOBILE_NAV.map((n) => {
           const on = isActive(pathname, n.href);

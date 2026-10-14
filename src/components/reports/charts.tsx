@@ -7,14 +7,13 @@ import {
   Cell,
   ComposedChart,
   Line,
-  Pie,
-  PieChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { Donut } from "@/components/ui/donut";
 import { formatINR, formatINRShort } from "@/lib/money";
 import { formatMinutes } from "@/lib/dates";
 import { cn } from "@/lib/cn";
@@ -130,28 +129,7 @@ export function DonutChart({ slices, total }: { slices: { name: string; amountPa
   return (
     <div className={cn("grid items-center gap-6 sm:grid-cols-[minmax(0,240px)_1fr]", wrap)}>
       <div className="relative mx-auto h-56 w-56">
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={slices}
-              dataKey="amountPaise"
-              nameKey="name"
-              innerRadius="64%"
-              outerRadius="100%"
-              paddingAngle={slices.length > 1 ? 1.5 : 0}
-              stroke="var(--bg-solid)"
-              strokeWidth={2}
-              cornerRadius={4}
-              onMouseEnter={(_, i) => setActive(i)}
-              onMouseLeave={() => setActive(null)}
-              animationDuration={900}
-            >
-              {slices.map((s, i) => (
-                <Cell key={s.name} fill={CATEGORY_COLORS[Math.min(i, CATEGORY_COLORS.length - 1)]} opacity={active == null || active === i ? 1 : 0.35} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        <Donut slices={slices.map((s, i) => ({ name: s.name, value: s.amountPaise, color: CATEGORY_COLORS[Math.min(i, CATEGORY_COLORS.length - 1)] }))} size={224} thickness={32} onActive={setActive} />
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <div className="max-w-28 truncate text-[11px] font-semibold text-fg-subtle">{shown ? shown.name : "Total spent"}</div>
           <div className="text-xl font-extrabold tabular-nums text-fg">{formatINRShort(shown ? shown.amountPaise : total)}</div>

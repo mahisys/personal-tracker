@@ -22,9 +22,9 @@ export function StreakFlame({ days, active, hint }: { days: number; active: bool
         <Flame className={cn("h-4 w-4", lit && "fill-amber-400 text-amber-500")} />
       </motion.span>
       {lit ? (
-        <>
+        <span>
           <span className="tabular-nums">{days}</span>-day streak
-        </>
+        </span>
       ) : (
         "Start a streak"
       )}

@@ -17,7 +17,8 @@ import { AnimatedNumber } from "@/components/client/animated-number";
 import { WorkspaceBadge } from "@/components/shared/workspace-badge";
 import { ACCOUNT_STYLE, AccountIcon, BooksNav, accountTypeLabel } from "@/components/books/meta";
 import { TransactionDialog } from "@/components/books/transaction-dialog";
-import { CATEGORY_COLORS, CategoryDonut, IncomeExpenseChart, OTHER_COLOR } from "@/components/books/charts";
+import { CategoryDonut, IncomeExpenseChart } from "@/components/books/charts";
+import { CATEGORY_COLORS, OTHER_COLOR } from "@/components/books/colors";
 import { CelebrateOnce } from "@/components/books/budget-celebration";
 
 export default async function BooksPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

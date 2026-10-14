@@ -1,6 +1,7 @@
 "use client";
 import { useId } from "react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Donut } from "@/components/ui/donut";
 import { formatINR, formatINRShort } from "@/lib/money";
 import { formatDay, formatMonth } from "@/lib/dates";
 
@@ -8,8 +9,6 @@ const IN = "#10b981";
 const OUT = "#f43f5e";
 
 /** Fixed categorical order for category breakdowns (never cycled — the tail folds into "Other"). */
-export const CATEGORY_COLORS = ["#6d5df6", "#4f7cff", "#22c1a3", "#f59e0b", "#ec4899", "#0ea5e9"];
-export const OTHER_COLOR = "#9a97b5";
 
 function TooltipCard({ title, rows }: { title: string; rows: { label: string; value: number; color: string }[] }) {
   return (
@@ -69,22 +68,7 @@ export function IncomeExpenseChart({ data }: { data: { month: string; incomePais
 export function CategoryDonut({ data, totalPaise }: { data: { name: string; totalPaise: number; color: string }[]; totalPaise: number }) {
   return (
     <div className="relative h-52 w-52 shrink-0" role="img" aria-label="Spend by category">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie data={data} dataKey="totalPaise" nameKey="name" innerRadius="68%" outerRadius="100%" paddingAngle={2} cornerRadius={6} stroke="var(--bg-solid)" strokeWidth={2} isAnimationActive>
-            {data.map((d) => (
-              <Cell key={d.name} fill={d.color} />
-            ))}
-          </Pie>
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              const p = payload[0].payload as (typeof data)[number];
-              return <TooltipCard title={p.name} rows={[{ label: `${Math.round((p.totalPaise / Math.max(1, totalPaise)) * 100)}% of spend`, value: p.totalPaise, color: p.color }]} />;
-            }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      <Donut slices={data.map((d) => ({ name: d.name, value: d.totalPaise, color: d.color }))} />
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">Spent</div>
         <div className="text-xl font-extrabold tabular-nums text-fg">{formatINRShort(totalPaise)}</div>
