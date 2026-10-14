@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. The look: warm, airy, optimistic. Soft aurora gradients behind frosted cards,
+ * a violet→indigo brand with mint (good), amber (attention) and rose (urgent) accents.
+ */
+:root {
+  --bg: #f6f5ff;
+  --bg-elev: rgb(255 255 255 / 0.72);
+  --bg-solid: #ffffff;
+  --bg-muted: #f1f0fb;
+  --fg: #1d1b3a;
+  --fg-muted: #6b6889;
+  --fg-subtle: #9a97b5;
+  --border: rgb(120 112 200 / 0.14);
+  --border-strong: rgb(120 112 200 / 0.26);
+  --ring: #7c6cf6;
+  --brand: #6d5df6;
+  --brand-2: #4f7cff;
+  --brand-fg: #ffffff;
+  --brand-soft: rgb(109 93 246 / 0.10);
+  --good: #10b981;
+  --warn: #f59e0b;
+  --bad: #f43f5e;
+  --aurora-1: rgb(167 139 250 / 0.35);
+  --aurora-2: rgb(96 165 250 / 0.28);
+  --aurora-3: rgb(52 211 153 / 0.22);
+  --aurora-4: rgb(251 191 36 / 0.18);
+  --shadow-card: 0 1px 2px rgb(40 30 120 / 0.04), 0 8px 24px -12px rgb(60 40 160 / 0.18);
+  --shadow-pop: 0 18px 48px -16px rgb(60 40 160 / 0.35);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b0c1d;
+  --bg-elev: rgb(24 24 52 / 0.66);
+  --bg-solid: #15162e;
+  --bg-muted: #1c1d3a;
+  --fg: #eceaff;
+  --fg-muted: #a6a3c9;
+  --fg-subtle: #706d96;
+  --border: rgb(160 150 255 / 0.12);
+  --border-strong: rgb(160 150 255 / 0.24);
+  --ring: #9d90ff;
+  --brand: #8b7dff;
+  --brand-2: #6a93ff;
+  --brand-soft: rgb(139 125 255 / 0.16);
+  --aurora-1: rgb(124 92 255 / 0.30);
+  --aurora-2: rgb(56 120 255 / 0.22);
+  --aurora-3: rgb(16 185 129 / 0.14);
+  --aurora-4: rgb(245 158 11 / 0.10);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+  --shadow-pop: 0 20px 50px -18px rgb(0 0 0 / 0.75);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-solid: var(--bg-solid);
+  --color-muted: var(--bg-muted);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-soft: var(--brand-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --radius-card: 1.25rem;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-float: float 18s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4%, -3%, 0) scale(1.06); }
+  66% { transform: translate3d(-3%, 4%, 0) scale(0.97); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Gradient text for hero numbers and greetings */
+.text-gradient {
+  background: linear-gradient(100deg, var(--brand) 0%, var(--brand-2) 55%, #22c1a3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Frosted surface used by cards, sidebar and dialogs */
+.glass {
+  background: var(--bg-elev);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-muted) 25%, color-mix(in oklab, var(--bg-muted), white 35%) 37%, var(--bg-muted) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* Thin, soft scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+/* Stagger children that use .animate-fade-up */
+.stagger > * { animation: fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(n+8) { animation-delay: 280ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); }

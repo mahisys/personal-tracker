@@ -1,48 +1,36 @@
-# Personal Tracker
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A personal task tracker, standalone on a single device: tasks are scheduled per date/time,
-"Today" is always the default focus, tasks support RAG status (YTS / WIP / DONE / OVERDUE),
-attachments (links or locally-stored documents), and reminders that fire as real on-device
-alarms and show up in an in-app notification center.
+## Getting Started
 
-This is a single React Native (Expo, TypeScript) app — there is no backend, no login, and
-no network dependency of any kind. Everything lives in an on-device SQLite database.
-
-```
-mobile/    React Native (Expo, TypeScript) app — the installable Android APK
-```
-
-## Quickstart
+First, run the development server:
 
 ```bash
-cd mobile
-npm install
-npx expo start             # scan the QR code with Expo Go, or run on an emulator
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-No accounts, environment variables, or servers to set up — the app works the moment it
-opens.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-See [`mobile/README.md`](./mobile/README.md) for full details, including **how to build
-the installable `.apk`** (cloud build via EAS, or a fully local Gradle build).
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Feature summary
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-- **Today-first**: the app opens straight to today's tasks; a calendar view lets you
-  browse any other date.
-- **Full CRUD**: create, view, edit, delete tasks (title, description, due date/time,
-  reminder date/time).
-- **Attachments**: attach a link (URL), or a document copied into the app's own local
-  storage, to any task.
-- **Reminders**: a local on-device alarm fires at the scheduled time (works fully offline),
-  and every delivered reminder is also recorded in an in-app notification center.
-- **RAG status**: every task shows as `YTS` (Yet To Start), `WIP` (Work In Progress),
-  `DONE`, or `OVERDUE` — the last is always derived from the due date, never stored, so it
-  can never go stale.
-- **Settings**: check/request notification permission, and clear all local data.
+## Learn More
 
-## Architecture notes
+To learn more about Next.js, take a look at the following resources:
 
-- Single-user, single-device, fully local — there is no server, sync, or shared state of
-  any kind, and nothing the app does ever requires a network connection.
-- SQLite (via `expo-sqlite`) is the only data layer; it isn't a cache in front of anything.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
