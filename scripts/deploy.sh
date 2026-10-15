@@ -69,6 +69,12 @@ for i in $(seq 1 30); do
   sleep 10
 done
 
+# Let the build account read the uploaded source, push the image and write build logs.
+for role in roles/storage.objectViewer roles/artifactregistry.writer roles/logging.logWriter; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$BUILD_SA" --role="$role" \
+    --condition=None --quiet >/dev/null
+done
+
 say "Creating the image registry and build permissions"
 terraform apply -input=false -auto-approve \
   -target=google_project_service.apis \
@@ -79,15 +85,15 @@ TAG="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || date +%s)-$(date +%Y
 IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$SERVICE/app:$TAG"
 say "Building $IMAGE with Cloud Build (about 5 minutes)"
 # Freshly enabled APIs and permissions can take a few minutes to take effect, so retry a few times.
-for attempt in 1 2 3 4 5; do
+for attempt in 1 2 3 4 5 6 7 8; do
   if gcloud builds submit "$ROOT" --tag "$IMAGE" --timeout=1800 --project "$PROJECT_ID"; then
     break
   fi
-  if [ "$attempt" = 5 ]; then
+  if [ "$attempt" = 8 ]; then
     echo "The build kept failing. Wait 5 minutes and run 'bash scripts/deploy.sh' again."
     exit 1
   fi
-  echo "Build did not start yet (Google is still setting up Cloud Build). Retrying in 60 seconds… ($attempt/5)"
+  echo "Build did not start yet (Google is still applying new permissions). Retrying in 60 seconds… ($attempt/8)"
   sleep 60
 done
 
