@@ -53,7 +53,23 @@ fi
 cd "$ROOT/infra"
 terraform init -input=false -upgrade -backend-config="bucket=$STATE_BUCKET" >/dev/null
 
-say "Enabling APIs, registry and build permissions"
+say "Enabling Google Cloud APIs (first run takes a few minutes)"
+gcloud services enable \
+  cloudbuild.googleapis.com compute.googleapis.com artifactregistry.googleapis.com run.googleapis.com \
+  sqladmin.googleapis.com secretmanager.googleapis.com iam.googleapis.com cloudresourcemanager.googleapis.com \
+  serviceusage.googleapis.com storage.googleapis.com --project "$PROJECT_ID"
+
+# Cloud Build runs as the Compute default service account in new projects. Google creates it a little
+# after the Compute API is enabled, and builds fail with NOT_FOUND until it exists — so wait for it.
+NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+BUILD_SA="${NUMBER}-compute@developer.gserviceaccount.com"
+for i in $(seq 1 30); do
+  gcloud iam service-accounts describe "$BUILD_SA" --project "$PROJECT_ID" >/dev/null 2>&1 && break
+  [ "$i" = 1 ] && echo "Waiting for Google to create the build service account…"
+  sleep 10
+done
+
+say "Creating the image registry and build permissions"
 terraform apply -input=false -auto-approve \
   -target=google_project_service.apis \
   -target=google_artifact_registry_repository.app \
@@ -61,8 +77,19 @@ terraform apply -input=false -auto-approve \
 
 TAG="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || date +%s)-$(date +%Y%m%d%H%M%S)"
 IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$SERVICE/app:$TAG"
-say "Building $IMAGE with Cloud Build"
-gcloud builds submit "$ROOT" --tag "$IMAGE" --region "$REGION" --timeout=1800
+say "Building $IMAGE with Cloud Build (about 5 minutes)"
+# Freshly enabled APIs and permissions can take a few minutes to take effect, so retry a few times.
+for attempt in 1 2 3 4 5; do
+  if gcloud builds submit "$ROOT" --tag "$IMAGE" --timeout=1800 --project "$PROJECT_ID"; then
+    break
+  fi
+  if [ "$attempt" = 5 ]; then
+    echo "The build kept failing. Wait 5 minutes and run 'bash scripts/deploy.sh' again."
+    exit 1
+  fi
+  echo "Build did not start yet (Google is still setting up Cloud Build). Retrying in 60 seconds… ($attempt/5)"
+  sleep 60
+done
 
 say "Applying infrastructure and rolling out"
 terraform apply -input=false -auto-approve -var "image=$IMAGE"
