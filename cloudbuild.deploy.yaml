@@ -1,0 +1,48 @@
+# Full deploy, run by scripts/deploy.sh on Google Cloud Build (not in your browser session):
+# build the image → push it → apply all infrastructure with Terraform → check the live app.
+# Substitutions are passed by the script: _IMAGE, _STATE_BUCKET, _REGION, _SERVICE.
+steps:
+  - id: build-image
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}", "."]
+
+  - id: push-image
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}"]
+
+  - id: fetch-settings
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args: ["storage", "cp", "gs://${_STATE_BUCKET}/terraform.tfvars", "infra/terraform.tfvars"]
+
+  - id: apply-infrastructure
+    name: hashicorp/terraform:1.9.8
+    dir: infra
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        set -e
+        terraform init -input=false -backend-config="bucket=${_STATE_BUCKET}"
+        sh adopt.sh $PROJECT_ID ${_REGION} ${_IMAGE}
+        terraform apply -input=false -auto-approve -lock-timeout=10m -var "image=${_IMAGE}"
+
+  - id: check-live-app
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        URL=$$(gcloud run services describe ${_SERVICE} --region ${_REGION} --format='value(status.url)')
+        echo "App: $$URL"
+        for i in $$(seq 1 30); do
+          if [ "$$(curl -s -o /dev/null -w '%{http_code}' $$URL/api/health)" = "200" ]; then echo "App is healthy"; exit 0; fi
+          sleep 10
+        done
+        echo "App did not become healthy"; exit 1
+
+images: ["${_IMAGE}"]
+timeout: 3600s
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8

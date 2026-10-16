@@ -16,20 +16,26 @@ One script creates the infrastructure and deploys the app; re-run it to ship eac
 | Monitoring | Uptime check + email alert, monthly budget alert |
 | Infrastructure as code | Terraform in `infra/`, state in `gs://mahisys-command-center-tfstate` |
 
-## 1. Deploy (about 15 minutes the first time)
+## 1. Deploy (about 20 minutes the first time, 5 minutes for updates)
 
 1. Open **Cloud Shell**: <https://shell.cloud.google.com/?project=mahisys-command-center>
-2. Get the code and run the script:
+2. Paste this one line:
    ```bash
-   git clone https://github.com/mahisys/personal-tracker.git
-   cd personal-tracker
-   git checkout claude/loving-pasteur-un8o7x   # until it is merged to main
-   bash scripts/deploy.sh
+   cd ~/personal-tracker 2>/dev/null || { git clone https://github.com/mahisys/personal-tracker.git ~/personal-tracker && cd ~/personal-tracker; }; git checkout -q claude/loving-pasteur-un8o7x && git pull && bash scripts/deploy.sh
    ```
-3. On the first run it asks which email(s) may sign in and where alerts go, and saves the answers in
-   `infra/terraform.tfvars` (git-ignored). It then enables the APIs, builds the image, creates Cloud SQL,
-   the bucket, secrets, Cloud Run, the scheduler and monitoring, and prints your app URL:
-   `https://command-center-304595122808.asia-south1.run.app`
+3. The first time it asks which email(s) may sign in and where alerts go.
+4. It prepares the project, then hands the deploy to **Cloud Build**, which builds the app and creates
+   or updates every resource with Terraform **on Google's servers**. You can close Cloud Shell or lock your
+   phone at any point; the deploy keeps going. Watch it on the link the script prints.
+5. Check the result at any time:
+   ```bash
+   cd ~/personal-tracker && bash scripts/status.sh
+   ```
+   Four green ticks = deployed, and it prints your app link
+   (`https://command-center-304595122808.asia-south1.run.app`).
+
+Running the deploy again is always safe: it reuses everything that exists, clears a lock left by an
+interrupted run, and adopts resources an interrupted run created.
 
 ## 2. Create your login (once)
 
