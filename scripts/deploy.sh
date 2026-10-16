@@ -77,6 +77,13 @@ for i in $(seq 1 12); do
 done
 ok "Deploy account ready: $DEPLOYER"
 
+# The image registry must exist before Cloud Build pushes to it (Terraform adopts it afterwards).
+if ! gcloud artifacts repositories describe "$SERVICE" --location="$REGION" >/dev/null 2>&1; then
+  gcloud artifacts repositories create "$SERVICE" --repository-format=docker --location="$REGION" \
+    --description="Command Center images" --quiet
+fi
+ok "Image registry ready: $REGION-docker.pkg.dev/$PROJECT_ID/$SERVICE"
+
 # Monthly budget alert (₹3,000), created once with your account.
 BILLING="$(gcloud billing projects describe "$PROJECT_ID" --format='value(billingAccountName)' 2>/dev/null | sed 's#billingAccounts/##' || true)"
 if [ -n "$BILLING" ] && ! gcloud billing budgets list --billing-account="$BILLING" --format='value(displayName)' 2>/dev/null | grep -q "Command Center monthly budget"; then

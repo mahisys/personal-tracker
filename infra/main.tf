@@ -309,6 +309,9 @@ resource "google_cloud_run_v2_service" "app" {
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
+  # The app does its own login, so the URL must be reachable without a Google identity. This switch does
+  # that without an "allUsers" IAM grant, which organisation policies (domain-restricted sharing) block.
+  invoker_iam_disabled = true
 
   template {
     service_account                  = google_service_account.run.email
@@ -385,14 +388,6 @@ resource "google_cloud_run_v2_service" "app" {
     google_secret_manager_secret_iam_member.run,
     google_secret_manager_secret_version.s,
   ]
-}
-
-# The app does its own login, so the URL is reachable by anyone; every page requires a session.
-resource "google_cloud_run_v2_service_iam_member" "public" {
-  name     = google_cloud_run_v2_service.app.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
 
 # ---------------------------------------------------------------------------
