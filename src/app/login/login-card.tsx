@@ -9,6 +9,27 @@ import { firebaseApp } from "@/lib/client/firebase";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
 
+/** Plain-language messages for the Firebase errors people actually hit. */
+function friendlyError(e: unknown): string {
+  const code = (e as { code?: string })?.code ?? "";
+  const map: Record<string, string> = {
+    "auth/invalid-credential": "Email or password is incorrect.",
+    "auth/wrong-password": "Email or password is incorrect.",
+    "auth/user-not-found": "No account with this email. Add it in Firebase → Authentication → Users.",
+    "auth/invalid-email": "That doesn't look like a valid email address.",
+    "auth/user-disabled": "This account is disabled in Firebase.",
+    "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
+    "auth/operation-not-allowed": "This sign-in method is turned off. Enable it in Firebase → Authentication → Sign-in method.",
+    "auth/unauthorized-domain": "This web address isn't authorised for sign-in yet. Redeploy, or add it in Firebase → Authentication → Settings → Authorized domains.",
+    "auth/network-request-failed": "Network problem. Check your connection and try again.",
+    "auth/popup-closed-by-user": "The Google window was closed before signing in.",
+    "auth/admin-restricted-operation": "This account can't sign in here. Create it in Firebase → Authentication → Users first.",
+  };
+  if (map[code]) return map[code];
+  const msg = e instanceof Error ? e.message.replace("Firebase: ", "") : "Sign-in failed";
+  return code ? `${msg}` : msg;
+}
+
 export function LoginCard({ config }: { config: PublicFirebaseConfig }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"google" | "email" | null>(null);
@@ -31,7 +52,7 @@ export function LoginCard({ config }: { config: PublicFirebaseConfig }) {
       const cred = await signInWithPopup(getAuth(firebaseApp(config)), new GoogleAuthProvider());
       await finish(await cred.user.getIdToken());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Sign-in failed");
+      toast.error(friendlyError(e), { duration: 10000 });
       setBusy(null);
     }
   }
@@ -43,7 +64,7 @@ export function LoginCard({ config }: { config: PublicFirebaseConfig }) {
       const cred = await signInWithEmailAndPassword(getAuth(firebaseApp(config)), String(form.get("email")), String(form.get("password")));
       await finish(await cred.user.getIdToken());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message.replace("Firebase: ", "") : "Sign-in failed");
+      toast.error(friendlyError(e), { duration: 10000 });
       setBusy(null);
     }
   }

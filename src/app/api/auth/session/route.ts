@@ -12,7 +12,11 @@ export async function POST(req: Request) {
     const auth = getAdminAuth();
     const decoded = await auth.verifyIdToken(idToken, true);
     if (!isAllowedEmail(decoded.email)) {
-      return NextResponse.json({ error: "This account is not allowed to use this app." }, { status: 403 });
+      console.warn(`[auth] sign-in refused: ${decoded.email} is not in ALLOWED_EMAILS`);
+      return NextResponse.json(
+        { error: `${decoded.email} is not on this app's allowed list. Sign in with the email you gave the deploy script.` },
+        { status: 403 },
+      );
     }
     if (Date.now() / 1000 - decoded.auth_time > 5 * 60) {
       return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
@@ -27,8 +31,10 @@ export async function POST(req: Request) {
       maxAge: FOURTEEN_DAYS_MS / 1000,
     });
     return res;
-  } catch {
-    return NextResponse.json({ error: "Sign-in failed. Please try again." }, { status: 401 });
+  } catch (e) {
+    const code = (e as { code?: string }).code ?? "unknown";
+    console.error(`[auth] session creation failed (${code}):`, e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: `Sign-in could not be completed on the server (${code}). Please try again.` }, { status: 401 });
   }
 }
 

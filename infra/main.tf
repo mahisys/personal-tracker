@@ -257,6 +257,7 @@ resource "google_identity_platform_config" "auth" {
     "${var.project_id}.firebaseapp.com",
     "${var.project_id}.web.app",
     trimprefix(local.app_url, "https://"),
+    trimprefix(google_cloud_run_v2_service.app.uri, "https://"),
   ]
   sign_in {
     allow_duplicate_emails = false
