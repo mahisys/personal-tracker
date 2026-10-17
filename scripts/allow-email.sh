@@ -45,6 +45,6 @@ sed -i "s|^allowed_emails.*|allowed_emails  = \"$EMAILS\"|" "$TFVARS"
 gcloud storage cp -q "$TFVARS" "$BUCKET/terraform.tfvars"
 
 gcloud run services update "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
-  --update-env-vars "^@^ALLOWED_EMAILS=$EMAILS" --quiet >/dev/null
+  --update-env-vars "^;^ALLOWED_EMAILS=$EMAILS" --quiet >/dev/null
 echo "✓ Allowed to sign in: $EMAILS"
 echo "  Wait about a minute, then sign in again."
