@@ -27,7 +27,10 @@ d=json.load(sys.stdin)
 if "error" in d: print("Could not list users:", d["error"].get("message"))
 else:
   users=d.get("userInfo",[])
-  print("\n".join(f"- {u.get(\"email\",\"(no email)\")}  disabled={u.get(\"disabled\",False)}  providers={[p.get(\"providerId\") for p in u.get(\"providerUserInfo\",[])]}" for u in users) or "(no users yet)")'
+  for u in users:
+    provs=[p.get("providerId") for p in u.get("providerUserInfo",[])]
+    print("-", u.get("email","(no email)"), " disabled=" + str(u.get("disabled",False)), " providers=" + ",".join(p for p in provs if p))
+  if not users: print("(no users yet)")'
 
 hr "Sign-in settings"
 curl -s "${H[@]}" "https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT_ID/config" \
@@ -52,7 +55,7 @@ read -r BID BST <<<"$(gcloud builds list --project $PROJECT_ID --limit 1 --sort-
 echo "Build $BID: $BST"
 if [ "$BST" = FAILURE ]; then
   gcloud builds describe "$BID" --project $PROJECT_ID --format=json | python3 -c 'import json,sys
-for s in json.load(sys.stdin).get("steps",[]): print(f"  {s.get(\"id\")}: {s.get(\"status\")}")'
+for s in json.load(sys.stdin).get("steps",[]): print("  " + str(s.get("id")) + ": " + str(s.get("status")))'
   echo "Last log lines:"
   gcloud logging read "resource.type=build AND resource.labels.build_id=$BID" --project $PROJECT_ID --limit 25 \
     --format='value(textPayload)' 2>/dev/null | tac | cut -c1-220
